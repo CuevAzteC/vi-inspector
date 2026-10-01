@@ -100,6 +100,12 @@ What happens on every PR:
 - **JSON** (`--json`): machine-readable, `new: true/false` per finding —
   feed it to your own tooling.
 - **SARIF** (`--sarif`): GitHub code scanning / any SARIF viewer.
+- **Viewer** (`vi-inspector view <path> -o viewer/`): findings-free static
+  site for browsing the code — same diagram / front-panel / connector-pane
+  pages, wire data-type tooltips, click-through SubVI navigation, dark
+  mode. Zip the folder and anyone can open `index.html` with just a
+  browser: no LabVIEW, no Python on the viewing machine. `view Single.vi`
+  with no `-o` renders that one VI and opens it in your browser directly.
 
 Exit codes: `0` = clean (or only baseline findings), `1` = new findings
 at/above `--fail-on`, `2` = a VI failed to parse (use

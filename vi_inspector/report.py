@@ -16,7 +16,8 @@ import re
 import shutil
 from pathlib import Path, PurePath
 
-from .review import SEVERITY_ORDER, VIReview, build_call_graph
+from .review import (SEVERITY_ORDER, VIReview, ReviewContext,
+                     build_call_graph, describe_many)
 
 SEV_COLORS = {
     "high": "#c0392b",
@@ -603,8 +604,11 @@ def _common_root(reviews: list[VIReview]) -> Path | None:
 
 
 def _build_tree(reviews: list[VIReview], page_names: dict[str, str],
-                common_root: Path | None) -> dict:
-    """Nested {dirs: {name: node}, vis: [entries]} folder tree."""
+                common_root: Path | None, viewer: bool = False) -> dict:
+    """Nested {dirs: {name: node}, vis: [entries]} folder tree.
+
+    In viewer mode severity/counts are suppressed (no findings exist).
+    """
     root: dict = {"dirs": {}, "vis": []}
     for r in reviews:
         if common_root is not None:
@@ -622,8 +626,8 @@ def _build_tree(reviews: list[VIReview], page_names: dict[str, str],
         node["vis"].append({
             "name": r.vi_name,
             "page": page_names[r.vi_path],
-            "sev": _worst_sev(r),
-            "n": len(r.findings),
+            "sev": None if viewer else _worst_sev(r),
+            "n": 0 if viewer else len(r.findings),
         })
     return root
 
@@ -681,25 +685,33 @@ def _iter_vis(node: dict):
 
 def _sidebar_html(project_name: str, tree: dict,
                   active_page: str | None = None,
-                  lvproj_uri: str | None = None) -> str:
+                  lvproj_uri: str | None = None,
+                  viewer: bool = False) -> str:
     n_vis = sum(1 for _ in _iter_vis(tree))
     n_findings = sum(v["n"] for v in _iter_vis(tree))
+    count = f"{n_vis} VIs"
+    if not viewer:
+        count += f" &middot; {n_findings} findings"
     proj = ""
     if lvproj_uri:
         proj = (
             f'<a class="proj-link" href="{html.escape(lvproj_uri, quote=True)}"'
             ' title="Open the .lvproj in LabVIEW (works when viewing this'
             ' report from disk)">&#9656; Open project in LabVIEW</a>')
-    return (
-        '<aside class="sidebar">'
-        f'<div class="side-head"><h2>{html.escape(project_name)}</h2>'
-        f'<div class="count">{n_vis} VIs &middot; {n_findings} findings</div></div>'
-        f"{proj}"
+    tools = (
         '<div class="side-tools">'
         '<input id="tree-search" type="text" placeholder="Filter VIs&hellip;"'
         ' autocomplete="off">'
-        '<label class="side-opt"><input type="checkbox" id="hide-clean">'
-        " Hide VIs with no findings</label></div>"
+        + ("" if viewer else
+           '<label class="side-opt"><input type="checkbox" id="hide-clean">'
+           " Hide VIs with no findings</label>")
+        + "</div>")
+    return (
+        '<aside class="sidebar">'
+        f'<div class="side-head"><h2>{html.escape(project_name)}</h2>'
+        f'<div class="count">{count}</div></div>'
+        f"{proj}"
+        f"{tools}"
         f'<div class="tree">{_tree_html(tree, active_page)}</div>'
         "</aside>")
 
@@ -766,11 +778,13 @@ def _gt_inner_html(gt: dict) -> str:
 # ---------------------------------------------------------------------------
 
 def _calls_html(review: VIReview, graph: dict, page_names: dict[str, str],
-                sev_by_path: dict[str, str | None]) -> str:
+                sev_by_path: dict[str, str | None],
+                viewer: bool = False) -> str:
     entry = graph.get(review.vi_path, {})
     calls = entry.get("calls", [])
     called_by = entry.get("called_by", [])
     external = entry.get("external", 0)
+    scope = "project" if viewer else "reviewed set"
 
     def _li(p: str) -> str:
         sev = sev_by_path.get(p)
@@ -781,12 +795,12 @@ def _calls_html(review: VIReview, graph: dict, page_names: dict[str, str],
                 f"{html.escape(Path(p).name)}</a></li>")
 
     calls_list = "".join(_li(p) for p in calls) or \
-        "<li><em>No SubVI calls into reviewed VIs.</em></li>"
+        f"<li><em>No SubVI calls into {scope} VIs.</em></li>"
     if external:
         calls_list += (f"<li><em>+ {external} call(s) to VIs outside this "
-                       "review (vi.lib, unreviewed files).</em></li>")
+                       f"{scope} (vi.lib, unviewed files).</em></li>")
     by_list = "".join(_li(p) for p in called_by) or \
-        "<li><em>Not called by any reviewed VI (top-level or unused).</em></li>"
+        f"<li><em>Not called by any {scope} VI (top-level or unused).</em></li>"
     return (
         '<div class="call-cols"><div><h3>Calls</h3>'
         f'<ul class="call-list">{calls_list}</ul></div>'
@@ -812,7 +826,7 @@ document.querySelectorAll('.lv-node[data-callee-page],.lv-node[data-callee-open]
   n.style.cursor='pointer';
   var t=n.querySelector('title');
   if(t){t.textContent=t.textContent+
-    '\\n\\nClick: open in this report. Double-click: open in LabVIEW.';}
+    '\\n\\nClick: open this VI\\'s page. Double-click: open in LabVIEW.';}
   if(n.hasAttribute('data-callee-page')){
     n.addEventListener('click',function(){
       window.location.href=n.getAttribute('data-callee-page');});
@@ -832,13 +846,20 @@ def _vi_page(review: VIReview, sidebar: str, page_names: dict[str, str],
              sev_by_path: dict[str, str | None], graph: dict,
              bd_svg: str | None, fp_svg: str | None,
              cpane_svg: str | None, node_index: dict,
-             ground_truth: dict | None) -> str:
-    counts = {s: len(review.by_severity(s)) for s in SEVERITY_ORDER}
-    badges = "".join(
-        f'<span class="badge" style="background:{SEV_COLORS[s]}">{counts[s]}'
-        f"<small>{s}</small></span>"
-        for s in SEVERITY_ORDER if counts[s]
-    ) or '<span class="sub">No findings &mdash; clean review</span>'
+             ground_truth: dict | None, viewer: bool = False) -> str:
+    if viewer:
+        m = review.metrics
+        badges = (
+            f'<span class="sub">{m.get("nodes", "?")} nodes &middot; '
+            f'{m.get("wires", "?")} wires &middot; '
+            f'{m.get("subvi_calls", "?")} SubVI calls</span>')
+    else:
+        counts = {s: len(review.by_severity(s)) for s in SEVERITY_ORDER}
+        badges = "".join(
+            f'<span class="badge" style="background:{SEV_COLORS[s]}">{counts[s]}'
+            f"<small>{s}</small></span>"
+            for s in SEVERITY_ORDER if counts[s]
+        ) or '<span class="sub">No findings &mdash; clean review</span>'
 
     lv_uri = _file_uri(review.vi_path)
     open_btn = ""
@@ -857,12 +878,15 @@ def _vi_page(review: VIReview, sidebar: str, page_names: dict[str, str],
             f"<p>{html.escape(review.parse_error or '')}</p></div>")
         diagrams_card = ""
     else:
-        findings = "".join(
-            _finding_html(f, _locate_ids(f.node_name, node_index))
-            for f in review.findings) or "<p>No findings. Clean review.</p>"
-        findings_card = (
-            f'<div class="card"><h2>Findings ({len(review.findings)})</h2>'
-            f"{findings}</div>")
+        if viewer:
+            findings_card = ""  # viewer mode: browse the code, no findings
+        else:
+            findings = "".join(
+                _finding_html(f, _locate_ids(f.node_name, node_index))
+                for f in review.findings) or "<p>No findings. Clean review.</p>"
+            findings_card = (
+                f'<div class="card"><h2>Findings ({len(review.findings)})</h2>'
+                f"{findings}</div>")
 
         tabs = [
             '<button class="tab active" data-tab="bd">Block diagram</button>',
@@ -881,18 +905,24 @@ def _vi_page(review: VIReview, sidebar: str, page_names: dict[str, str],
                 '<p class="cpane-cap">VI icon and connector pane as defined '
                 "in the VI &mdash; hover a terminal for its details.</p>"
                 "</div></div>")
-        if ground_truth:
+        if ground_truth and not viewer:
             tabs.append(
                 '<button class="tab" data-tab="gt">LabVIEW export</button>')
             panes.append(
                 f'<div id="pane-gt" class="tabpane hidden">'
                 f"{_gt_inner_html(ground_truth)}</div>")
+        if viewer:
+            hint = ('Ctrl+E toggles &middot; hover a wire for its data type '
+                    '&middot; click a SubVI to open it &middot; double-click '
+                    'empty space opens this VI in LabVIEW')
+        else:
+            hint = ('Ctrl+E toggles &middot; hover a wire for its data type '
+                    '&middot; double-click a SubVI to open it &middot; '
+                    'double-click empty space opens this VI')
         diagrams_card = (
             '<div class="card"><h2>Diagram</h2>'
             '<div class="tabs">' + "".join(tabs) +
-            '<span class="tab-hint">Ctrl+E toggles &middot; hover a wire for '
-            "its data type &middot; double-click a SubVI to open it &middot; "
-            "double-click empty space opens this VI</span></div>"
+            f'<span class="tab-hint">{hint}</span></div>'
             + "".join(panes) + "</div>")
 
     metrics = "".join(
@@ -911,7 +941,7 @@ def _vi_page(review: VIReview, sidebar: str, page_names: dict[str, str],
         f"{findings_card}"
         f"{diagrams_card}"
         '<div class="card"><h2>Hierarchy</h2>'
-        f"{_calls_html(review, graph, page_names, sev_by_path)}</div>"
+        f"{_calls_html(review, graph, page_names, sev_by_path, viewer=viewer)}</div>"
         '<div class="card"><h2>Metrics</h2>'
         f'<div class="metrics">{metrics}</div></div>'
     )
@@ -920,18 +950,22 @@ def _vi_page(review: VIReview, sidebar: str, page_names: dict[str, str],
         body_attrs = (
             f' data-lvuri="{html.escape(lv_uri, quote=True)}"'
             f' data-lvpath="{html.escape(str(Path(review.vi_path).resolve()), quote=True)}"')
+    page_kind = "VI Viewer" if viewer else "VI Review"
+    nav_label = "&larr; Project browser" if viewer else "&larr; Project report"
+    footer = ("Generated by vi-inspector viewer (lvkit engine, Apache-2.0)"
+              if viewer else
+              "Generated by vi-inspector (lvkit engine, Apache-2.0)")
     return (
         "<!DOCTYPE html><html><head><meta charset=\"utf-8\">"
-        f"<title>{html.escape(review.vi_name)} - VI Review</title>"
+        f"<title>{html.escape(review.vi_name)} - {page_kind}</title>"
         f"<style>{CSS}</style></head>"
         f"<body{body_attrs}>"
         '<div class="layout">'
         f"{sidebar}"
         '<main class="main">'
-        f'<div class="nav"><a href="index.html">&larr; Project report</a></div>'
+        f'<div class="nav"><a href="index.html">{nav_label}</a></div>'
         f"{body}"
-        '<div class="footer">Generated by vi-inspector (lvkit engine, '
-        "Apache-2.0)</div>"
+        f'<div class="footer">{footer}</div>'
         "</main></div>"
         f"<script>{JS}</script><script>{NODE_CLICK_JS}</script>"
         "</body></html>")
@@ -1023,6 +1057,137 @@ def _index_page(project_name: str, reviews: list[VIReview], sidebar: str,
         "</body></html>")
 
 
+def _viewer_index_page(project_name: str, reviews: list[VIReview],
+                       sidebar: str,
+                       page_names: dict[str, str]) -> str:
+    """Project browser for viewer mode: no findings, just the code."""
+    ok = [r for r in reviews if r.parse_ok]
+    rows = []
+    for r in sorted(ok, key=lambda r: r.vi_name.lower()):
+        m = r.metrics
+        rows.append(
+            f'<tr><td><a href="{html.escape(page_names[r.vi_path], quote=True)}">'
+            f"{html.escape(r.vi_name)}</a></td>"
+            f"<td>{m.get('nodes', '?')}</td><td>{m.get('wires', '?')}</td>"
+            f"<td>{m.get('structures', '?')}</td>"
+            f"<td>{m.get('subvi_calls', '?')}</td></tr>"
+        )
+    failed = [r for r in reviews if not r.parse_ok]
+    for r in failed:
+        rows.append(
+            f"<tr><td>{html.escape(r.vi_name)}</td>"
+            f'<td colspan="4"><em>Parse failed: '
+            f"{html.escape(r.parse_error or '')}</em></td></tr>"
+        )
+    return (
+        "<!DOCTYPE html><html><head><meta charset=\"utf-8\">"
+        f"<title>{html.escape(project_name)} - VI Viewer</title>"
+        f"<style>{CSS}</style></head><body>"
+        '<div class="layout">'
+        f"{sidebar}"
+        '<main class="main">'
+        f"<h1>{html.escape(project_name)}</h1>"
+        f'<div class="sub">Browse {len(ok)}/{len(reviews)} VIs &mdash; '
+        "block diagrams, front panels and connector panes rendered with "
+        "no LabVIEW required</div>"
+        '<div class="badges">'
+        '<button class="btn" id="theme-toggle" style="margin-left:auto"'
+        ' title="Toggle light/dark page theme">◐ Theme</button></div>'
+        '<div class="card"><h2>Browsing</h2>'
+        "<ul><li>Pick a VI in the folder tree, or search by name.</li>"
+        "<li>Block diagram / front panel / connector pane tabs on every "
+        "VI &mdash; <b>Ctrl+E</b> switches diagram and panel.</li>"
+        "<li>Click a SubVI node on a diagram to open that VI's page; "
+        "hover any wire for its data type.</li>"
+        "<li>Double-click empty diagram space to open the VI in LabVIEW "
+        "(when viewing from disk on a machine that has it).</li>"
+        "</ul>"
+        '<p class="sub">Diagrams are rendered from the VI binaries by an '
+        "open parser, so they read like the real thing but may differ "
+        "cosmetically from LabVIEW.</p></div>"
+        '<div class="card"><h2>VIs</h2>'
+        '<table id="vi-table"><tr><th>VI</th><th>Nodes</th><th>Wires</th>'
+        "<th>Structures</th><th>SubVI calls</th></tr>"
+        f"{''.join(rows)}</table></div>"
+        '<div class="footer">Generated by vi-inspector viewer (lvkit engine, '
+        "Apache-2.0). Open this folder's index.html on any machine &mdash; "
+        "no LabVIEW or Python needed to browse.</div>"
+        "</main></div>"
+        f"<script>{JS}</script>"
+        "</body></html>")
+
+
+def _write_vi_pages(out: Path, reviews: list[VIReview],
+                    page_names: dict[str, str], graph: dict, tree: dict,
+                    project_name: str, lvproj_uri: str | None,
+                    viewer: bool, max_diagrams: int | None,
+                    page_for: dict[str, str],
+                    gt_for=None) -> None:
+    """Render every per-VI page. Shared by the review report and viewer."""
+    sev_by_path = ({r.vi_path: _worst_sev(r) for r in reviews}
+                   if not viewer else {})
+    for i, r in enumerate(reviews):
+        with_views = max_diagrams is None or i < max_diagrams
+        bd_svg, fp_svg, cpane_svg, node_index = None, None, None, {}
+        if with_views and r.parse_ok:
+            bd_svg, fp_svg, info = _render_views(r.vi_path)
+            bd_svg = _inject_subvi_links(bd_svg, r.vi_path, page_for)
+            bd_svg = _inject_wire_tips(bd_svg, info.get("wire_tips", {}))
+            cpane_svg = _extract_cpane(bd_svg)
+            node_index = _node_name_index(bd_svg)
+        sidebar = _sidebar_html(project_name, tree,
+                                active_page=page_names[r.vi_path],
+                                lvproj_uri=lvproj_uri, viewer=viewer)
+        html_text = _vi_page(r, sidebar, page_names, sev_by_path, graph,
+                             bd_svg, fp_svg, cpane_svg, node_index,
+                             gt_for(r) if gt_for else None, viewer=viewer)
+        (out / page_names[r.vi_path]).write_text(html_text, encoding="utf-8")
+
+
+def generate_viewer(vi_paths: list[str | Path], project_name: str,
+                    out_dir: str | Path,
+                    max_diagrams: int | None = None) -> Path:
+    """Write a findings-free static viewer site. Returns index.html path.
+
+    Each VI is parsed for metrics + call navigation only (no rules run),
+    then rendered with the same per-VI diagram pages as the review report:
+    block-diagram / front-panel / connector-pane tabs, wire data-type
+    tooltips, click-through SubVI navigation, dark mode. Output is plain
+    static HTML -- open index.html on any machine, no LabVIEW or Python
+    required on the viewing side.
+    """
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    paths = [str(p) for p in vi_paths]
+    ctx = ReviewContext(paths)
+    reviews = describe_many(paths, ctx)
+
+    page_names = {r.vi_path: f"vi_{i:03d}.html" for i, r in enumerate(reviews)}
+    graph = build_call_graph(reviews)
+    common = _common_root(reviews)
+    tree = _build_tree(reviews, page_names, common, viewer=True)
+    # normcase absolute-path -> page, for SubVI click-link injection
+    page_for = {os.path.normcase(str(Path(p).resolve())): pg
+                for p, pg in page_names.items()}
+
+    lvproj_uri = None
+    if common is not None:
+        lvprojs = sorted(common.glob("*.lvproj"))
+        if lvprojs:
+            lvproj_uri = _file_uri(str(lvprojs[0]))
+
+    sidebar_index = _sidebar_html(project_name, tree,
+                                  lvproj_uri=lvproj_uri, viewer=True)
+    _write_vi_pages(out, reviews, page_names, graph, tree, project_name,
+                    lvproj_uri, True, max_diagrams, page_for)
+
+    index_path = out / "index.html"
+    index_path.write_text(
+        _viewer_index_page(project_name, reviews, sidebar_index, page_names),
+        encoding="utf-8")
+    return index_path
+
+
 def generate_report(reviews: list[VIReview], project_name: str,
                     out_dir: str | Path,
                     max_diagrams: int | None = None,
@@ -1061,7 +1226,6 @@ def generate_report(reviews: list[VIReview], project_name: str,
 
     page_names = {r.vi_path: f"vi_{i:03d}.html" for i, r in enumerate(reviews)}
     graph = build_call_graph(reviews)
-    sev_by_path = {r.vi_path: _worst_sev(r) for r in reviews}
     common = _common_root(reviews)
     tree = _build_tree(reviews, page_names, common)
     # normcase absolute-path -> page, for SubVI click-link injection
@@ -1077,22 +1241,8 @@ def generate_report(reviews: list[VIReview], project_name: str,
     sidebar_index = _sidebar_html(project_name, tree,
                                   lvproj_uri=lvproj_uri)
 
-    for i, r in enumerate(reviews):
-        with_views = max_diagrams is None or i < max_diagrams
-        bd_svg, fp_svg, cpane_svg, node_index = None, None, None, {}
-        if with_views and r.parse_ok:
-            bd_svg, fp_svg, info = _render_views(r.vi_path)
-            bd_svg = _inject_subvi_links(bd_svg, r.vi_path, page_for)
-            bd_svg = _inject_wire_tips(bd_svg, info.get("wire_tips", {}))
-            cpane_svg = _extract_cpane(bd_svg)
-            node_index = _node_name_index(bd_svg)
-        sidebar = _sidebar_html(project_name, tree,
-                                active_page=page_names[r.vi_path],
-                                lvproj_uri=lvproj_uri)
-        html_text = _vi_page(r, sidebar, page_names, sev_by_path, graph,
-                             bd_svg, fp_svg, cpane_svg, node_index,
-                             _gt_for(r))
-        (out / page_names[r.vi_path]).write_text(html_text, encoding="utf-8")
+    _write_vi_pages(out, reviews, page_names, graph, tree, project_name,
+                    lvproj_uri, False, max_diagrams, page_for, _gt_for)
 
     index_html = _index_page(project_name, reviews, sidebar_index,
                              page_names, totals)

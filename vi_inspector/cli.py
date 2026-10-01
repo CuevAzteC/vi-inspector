@@ -10,7 +10,20 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from vi_inspector.vi import inspect_vi  # noqa: E402
 from vi_inspector.project import parse_project_file, summarize_project  # noqa: E402
 from vi_inspector.review import review_many, SEVERITY_ORDER, ReviewContext  # noqa: E402
-from vi_inspector.report import generate_report  # noqa: E402
+from vi_inspector.report import generate_report, generate_viewer  # noqa: E402
+
+
+def _collect_vi_paths(paths: list[str]) -> list[str]:
+    """Expand CLI path args: directories -> recursive *.vi, files as-is."""
+    import glob as _glob
+    vi_paths: list[str] = []
+    for p in paths:
+        if os.path.isdir(p):
+            vi_paths.extend(sorted(_glob.glob(os.path.join(p, "**", "*.vi"),
+                                              recursive=True)))
+        else:
+            vi_paths.append(p)
+    return vi_paths
 
 
 def _relpath(p: str) -> str:
@@ -92,14 +105,7 @@ def _emit_github_annotations(new_findings) -> None:
 
 
 def cmd_review(args) -> int:
-    import glob as _glob
-    vi_paths: list[str] = []
-    for p in args.paths:
-        if os.path.isdir(p):
-            vi_paths.extend(sorted(_glob.glob(os.path.join(p, "**", "*.vi"),
-                                              recursive=True)))
-        else:
-            vi_paths.append(p)
+    vi_paths = _collect_vi_paths(args.paths)
     ctx = ReviewContext(vi_paths)
     reviews = review_many(vi_paths, ctx)
 
@@ -182,6 +188,41 @@ def cmd_review(args) -> int:
     return 1 if failing else 0
 
 
+def cmd_view(args) -> int:
+    """Browse VIs as a static HTML viewer site. No findings, no LabVIEW."""
+    import tempfile
+    import webbrowser
+    vi_paths = _collect_vi_paths(args.paths)
+    if not vi_paths:
+        print("view: no .vi files found in the given paths.", file=sys.stderr)
+        return 2
+    first = args.paths[0]
+    project_name = (os.path.basename(os.path.normpath(first))
+                    if os.path.isdir(first)
+                    else os.path.splitext(os.path.basename(first))[0])
+
+    if args.out:
+        idx = generate_viewer(vi_paths, project_name, args.out,
+                              max_diagrams=args.max_diagrams)
+        n = len(vi_paths)
+        print(f"Viewer: {idx} ({n} VI{'s' if n != 1 else ''})")
+        print("Open index.html on any machine -- no LabVIEW or Python "
+              "needed to browse.")
+        return 0
+
+    if len(vi_paths) > 1:
+        print("view: multiple VIs need -o/--out to write a viewer site; "
+              "without it, pass a single .vi to open it directly.",
+              file=sys.stderr)
+        return 2
+    tmp = tempfile.mkdtemp(prefix="vi-viewer-")
+    generate_viewer(vi_paths, project_name, tmp)
+    page = os.path.join(tmp, "vi_000.html")
+    print(f"Opening {vi_paths[0]} in the browser...")
+    webbrowser.open(f"file://{page}")
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(
         description="Inspect LabVIEW files without LabVIEW installed.")
@@ -227,9 +268,24 @@ def main(argv=None):
                        help="Exit 0/1 on findings even if some VIs failed "
                             "to parse (default: exit 2)")
 
+    p_view = sub.add_parser(
+        "view",
+        help="Browse VIs as static HTML (diagrams, no LabVIEW needed)")
+    p_view.add_argument("paths", nargs="+",
+                        help=".vi files or directories (recursive)")
+    p_view.add_argument("-o", "--out", metavar="OUT_DIR", default=None,
+                        help="Write the viewer site to OUT_DIR (static "
+                             "HTML; open index.html anywhere). Without "
+                             "this, a single .vi opens in the browser.")
+    p_view.add_argument("--max-diagrams", type=int, default=None,
+                        help="Cap how many VI pages embed rendered diagrams "
+                             "(rendering is the slow step)")
+
     args = ap.parse_args(argv)
     if args.cmd == "review":
         return cmd_review(args)
+    if args.cmd == "view":
+        return cmd_view(args)
     if args.cmd == "vi":
         report = inspect_vi(args.path)
     else:

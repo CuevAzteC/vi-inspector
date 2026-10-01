@@ -375,7 +375,8 @@ def _rule_local_variables(pvi: ParsedVI, review: VIReview) -> None:
 # as a planned rule, not an active one.
 #
 #
-def _collect_metrics(pvi: ParsedVI, review: VIReview) -> None:
+def _collect_metrics(pvi: ParsedVI, review: VIReview,
+                   skip_cplx: bool = False) -> None:
     bd = pvi.block_diagram
     n_structures = (
         len(bd.loops) + len(bd.case_structures) + len(bd.flat_sequences)
@@ -394,7 +395,7 @@ def _collect_metrics(pvi: ParsedVI, review: VIReview) -> None:
         "subvi_calls": sum(1 for n in bd.nodes if n.node_type in ("iUse", "polyIUse", "dynIUse", "callParentDynIUse")),
         "fp_terminals": len(bd.fp_terminals),
     }
-    if review.metrics["nodes"] > 50:
+    if review.metrics["nodes"] > 50 and not skip_cplx:
         review.findings.append(ReviewFinding(
             rule_id="CPLX-1", severity="info", title="Large block diagram",
             detail=f"{review.metrics['nodes']} nodes on one diagram. Consider splitting into subVIs.",
@@ -479,3 +480,31 @@ def review_many(vi_paths: list[str | Path],
     if ctx is None:
         ctx = ReviewContext(vi_paths)
     return [review_vi(p, ctx) for p in vi_paths]
+
+
+def describe_vi(vi_path: str | Path,
+                ctx: ReviewContext | None = None) -> VIReview:
+    """Parse a VI for browsing: metrics + resolved call list, no rules run.
+
+    Powers the `view` command's static viewer. Findings stay empty by
+    design; pass a ReviewContext (built over the whole viewed set) so
+    SubVI click-through navigation resolves.
+    """
+    vi_path = str(vi_path)
+    review = VIReview(vi_path=vi_path, vi_name=Path(vi_path).name)
+    try:
+        pvi = parse_vi(vi_path)
+    except Exception as e:  # noqa: BLE001 -- one bad VI must not kill the run
+        review.parse_ok = False
+        review.parse_error = f"{type(e).__name__}: {e}"
+        return review
+    _collect_metrics(pvi, review, skip_cplx=True)
+    _collect_calls(pvi, review, ctx)
+    return review
+
+
+def describe_many(vi_paths: list[str | Path],
+                  ctx: ReviewContext | None = None) -> list[VIReview]:
+    if ctx is None:
+        ctx = ReviewContext(vi_paths)
+    return [describe_vi(p, ctx) for p in vi_paths]
