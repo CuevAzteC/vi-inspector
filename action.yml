@@ -1,0 +1,58 @@
+name: 'vi-inspector'
+description: 'Automated LabVIEW code review in CI — no LabVIEW license required'
+branding:
+  icon: 'check-square'
+  color: 'blue'
+
+inputs:
+  path:
+    description: 'VI files or directories to review (space-separated)'
+    required: false
+    default: '.'
+  fail-on:
+    description: 'Fail the build on new findings at or above this severity (high|medium|low|info|never)'
+    required: false
+    default: 'high'
+  baseline:
+    description: 'Path to a baseline JSON file (create with: vi-inspector review <path> --update-baseline FILE). Only findings not in the baseline fail the build.'
+    required: false
+    default: ''
+  sarif:
+    description: "Upload results to GitHub code scanning (requires 'security-events: write' permission)"
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install vi-inspector
+      shell: bash
+      run: pip install "git+https://github.com/${GITHUB_ACTION_REPOSITORY}@${GITHUB_ACTION_REF}"
+
+    - name: Run vi-inspector review
+      shell: bash
+      run: |
+        set -euo pipefail
+        # shellcheck disable=SC2206
+        PATHS=(${{ inputs.path }})
+        ARGS=(review "${PATHS[@]}" --fail-on "${{ inputs.fail-on }}")
+        if [ -n "${{ inputs.baseline }}" ]; then
+          ARGS+=(--baseline "${{ inputs.baseline }}")
+        fi
+        if [ "${{ inputs.sarif }}" = "true" ]; then
+          ARGS+=(--sarif vi-inspector.sarif)
+        fi
+        vi-inspector "${ARGS[@]}"
+        # Annotations (::error/::warning) are emitted automatically.
+
+    - name: Upload SARIF to code scanning
+      if: inputs.sarif == 'true'
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: vi-inspector.sarif
+        category: vi-inspector
