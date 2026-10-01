@@ -1,0 +1,579 @@
+<?xml version='1.0' encoding='utf-8'?>
+<SL__rootObject class="oHExt" uid="234">
+  <root class="diag" uid="126">
+    <objFlags>541312</objFlags>
+    <zPlaneList elements="8">
+      <SL__arrayElement class="dynIUse" uid="271">
+        <objFlags>640</objFlags>
+        <termList elements="12">
+          <SL__arrayElement class="term" uid="276">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="283">
+              <objFlags>513</objFlags>
+              <typeDesc>TypeID(17)</typeDesc>
+              <termBounds>(24, 24, 32, 32)</termBounds>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="286">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="287">
+              <typeDesc>TypeID(18)</typeDesc>
+              <termBounds>(16, 24, 24, 32)</termBounds>
+              <paramIdx>1</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="290">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="291">
+              <typeDesc>TypeID(19)</typeDesc>
+              <termBounds>(8, 24, 16, 32)</termBounds>
+              <paramIdx>2</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="294">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="295">
+              <typeDesc>TypeID(20)</typeDesc>
+              <termBounds>(0, 24, 8, 32)</termBounds>
+              <paramIdx>3</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="298">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="299">
+              <typeDesc>TypeID(21)</typeDesc>
+              <termBounds>(16, 16, 32, 24)</termBounds>
+              <paramIdx>4</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="301">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="302">
+              <typeDesc>TypeID(22)</typeDesc>
+              <termBounds>(0, 16, 16, 24)</termBounds>
+              <paramIdx>5</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="304">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="305">
+              <typeDesc>TypeID(23)</typeDesc>
+              <termBounds>(16, 8, 32, 16)</termBounds>
+              <paramIdx>6</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="307">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="308">
+              <typeDesc>TypeID(24)</typeDesc>
+              <termBounds>(0, 8, 16, 16)</termBounds>
+              <paramIdx>7</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="310">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="311">
+              <objFlags>512</objFlags>
+              <typeDesc>TypeID(25)</typeDesc>
+              <termBounds>(24, 0, 32, 8)</termBounds>
+              <paramIdx>8</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="313">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="314">
+              <typeDesc>TypeID(26)</typeDesc>
+              <termBounds>(16, 0, 24, 8)</termBounds>
+              <paramIdx>9</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="316">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="317">
+              <typeDesc>TypeID(27)</typeDesc>
+              <termBounds>(8, 0, 16, 8)</termBounds>
+              <paramIdx>10</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="319">
+            <objFlags>36864</objFlags>
+            <dco class="iUseDCO" uid="320">
+              <objFlags>4224</objFlags>
+              <typeDesc>TypeID(28)</typeDesc>
+              <termBounds>(0, 0, 8, 8)</termBounds>
+              <paramIdx>11</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          </termList>
+        <label class="label" uid="273">
+          <objFlags>2495819</objFlags>
+          <partID>16</partID>
+          <howGrow>4096</howGrow>
+          <bounds>(-17, 0, 0, 72)</bounds>
+          <image class="Image">
+            <ImageResID>-619</ImageResID>
+            </image>
+          <fgColor>01000000</fgColor>
+          <bgColor>01000000</bgColor>
+          <textRec class="textHair">
+            <mode>82948</mode>
+            <text>"Simulation.vi"</text>
+            <bgColor>01000000</bgColor>
+            <fr elements="1">
+              <SL__arrayElement class="fontRun">
+                <fontid>1</fontid>
+                </SL__arrayElement>
+              </fr>
+            </textRec>
+          </label>
+        <bounds>(26, 166, 58, 198)</bounds>
+        <shortCount>2</shortCount>
+        <clumpNum>262147</clumpNum>
+        <connectorTM>TypeID(29)</connectorTM>
+        <dynLink class="dynLink" uid="322" ScopeInfo="0" />
+        </SL__arrayElement>
+      <SL__arrayElement class="dynIUse" uid="115">
+        <objFlags>640</objFlags>
+        <termList elements="12">
+          <SL__arrayElement class="term" uid="189">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="191">
+              <objFlags>513</objFlags>
+              <typeDesc>TypeID(30)</typeDesc>
+              <termBounds>(24, 24, 32, 32)</termBounds>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="193">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="195">
+              <typeDesc>TypeID(31)</typeDesc>
+              <termBounds>(16, 24, 24, 32)</termBounds>
+              <paramIdx>1</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="197">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="198">
+              <typeDesc>TypeID(32)</typeDesc>
+              <termBounds>(8, 24, 16, 32)</termBounds>
+              <paramIdx>2</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="201">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="203">
+              <typeDesc>TypeID(33)</typeDesc>
+              <termBounds>(0, 24, 8, 32)</termBounds>
+              <paramIdx>3</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="206">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="207">
+              <typeDesc>TypeID(34)</typeDesc>
+              <termBounds>(16, 16, 32, 24)</termBounds>
+              <paramIdx>4</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="210">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="212">
+              <typeDesc>TypeID(35)</typeDesc>
+              <termBounds>(0, 16, 16, 24)</termBounds>
+              <paramIdx>5</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="214">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="216">
+              <typeDesc>TypeID(36)</typeDesc>
+              <termBounds>(16, 8, 32, 16)</termBounds>
+              <paramIdx>6</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="220">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="221">
+              <typeDesc>TypeID(37)</typeDesc>
+              <termBounds>(0, 8, 16, 16)</termBounds>
+              <paramIdx>7</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="223">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="224">
+              <objFlags>512</objFlags>
+              <typeDesc>TypeID(38)</typeDesc>
+              <termBounds>(24, 0, 32, 8)</termBounds>
+              <paramIdx>8</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="226">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="227">
+              <typeDesc>TypeID(39)</typeDesc>
+              <termBounds>(16, 0, 24, 8)</termBounds>
+              <paramIdx>9</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="240">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="241">
+              <typeDesc>TypeID(40)</typeDesc>
+              <termBounds>(8, 0, 16, 8)</termBounds>
+              <paramIdx>10</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="252">
+            <objFlags>36864</objFlags>
+            <dco class="iUseDCO" uid="261">
+              <objFlags>4224</objFlags>
+              <typeDesc>TypeID(41)</typeDesc>
+              <termBounds>(0, 0, 8, 8)</termBounds>
+              <paramIdx>11</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          </termList>
+        <label class="label" uid="187">
+          <objFlags>2495819</objFlags>
+          <partID>16</partID>
+          <howGrow>4096</howGrow>
+          <bounds>(-17, 0, 0, 72)</bounds>
+          <image class="Image">
+            <ImageResID>-619</ImageResID>
+            </image>
+          <fgColor>01000000</fgColor>
+          <bgColor>01000000</bgColor>
+          <textRec class="textHair">
+            <mode>82948</mode>
+            <text>"CoreCMDs.vi"</text>
+            <bgColor>01000000</bgColor>
+            <fr elements="1">
+              <SL__arrayElement class="fontRun">
+                <fontid>1</fontid>
+                </SL__arrayElement>
+              </fr>
+            </textRec>
+          </label>
+        <bounds>(65, 166, 97, 198)</bounds>
+        <shortCount>4</shortCount>
+        <clumpNum>327684</clumpNum>
+        <connectorTM>TypeID(42)</connectorTM>
+        <dynLink class="dynLink" uid="266" ScopeInfo="0" />
+        </SL__arrayElement>
+      <SL__arrayElement class="callParentDynIUse" uid="6">
+        <objFlags>640</objFlags>
+        <termList elements="12">
+          <SL__arrayElement class="term" uid="125">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="123">
+              <objFlags>513</objFlags>
+              <typeDesc>TypeID(43)</typeDesc>
+              <termBounds>(24, 24, 32, 32)</termBounds>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="139">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="135">
+              <typeDesc>TypeID(44)</typeDesc>
+              <termBounds>(16, 24, 24, 32)</termBounds>
+              <paramIdx>1</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="142">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="140">
+              <typeDesc>TypeID(45)</typeDesc>
+              <termBounds>(8, 24, 16, 32)</termBounds>
+              <paramIdx>2</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="145">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="143">
+              <objFlags>4609</objFlags>
+              <typeDesc>TypeID(46)</typeDesc>
+              <termBounds>(0, 24, 8, 32)</termBounds>
+              <paramIdx>3</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="148">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="146">
+              <typeDesc>TypeID(47)</typeDesc>
+              <termBounds>(16, 16, 32, 24)</termBounds>
+              <paramIdx>4</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="151">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="149">
+              <typeDesc>TypeID(48)</typeDesc>
+              <termBounds>(0, 16, 16, 24)</termBounds>
+              <paramIdx>5</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="154">
+            <objFlags>36864</objFlags>
+            <dco class="iUseDCO" uid="152">
+              <objFlags>512</objFlags>
+              <typeDesc>TypeID(49)</typeDesc>
+              <termBounds>(16, 8, 32, 16)</termBounds>
+              <paramIdx>6</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="157">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="155">
+              <typeDesc>TypeID(50)</typeDesc>
+              <termBounds>(0, 8, 16, 16)</termBounds>
+              <paramIdx>7</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="160">
+            <objFlags>36864</objFlags>
+            <dco class="iUseDCO" uid="158">
+              <objFlags>512</objFlags>
+              <typeDesc>TypeID(51)</typeDesc>
+              <termBounds>(24, 0, 32, 8)</termBounds>
+              <paramIdx>8</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="163">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="161">
+              <typeDesc>TypeID(52)</typeDesc>
+              <termBounds>(16, 0, 24, 8)</termBounds>
+              <paramIdx>9</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="166">
+            <objFlags>4096</objFlags>
+            <dco class="iUseDCO" uid="164">
+              <typeDesc>TypeID(53)</typeDesc>
+              <termBounds>(8, 0, 16, 8)</termBounds>
+              <paramIdx>10</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          <SL__arrayElement class="term" uid="169">
+            <objFlags>36864</objFlags>
+            <dco class="iUseDCO" uid="167">
+              <objFlags>4224</objFlags>
+              <typeDesc>TypeID(54)</typeDesc>
+              <termBounds>(0, 0, 8, 8)</termBounds>
+              <paramIdx>11</paramIdx>
+              </dco>
+            </SL__arrayElement>
+          </termList>
+        <label class="label" uid="116">
+          <objFlags>2495819</objFlags>
+          <partID>16</partID>
+          <howGrow>4096</howGrow>
+          <bounds>(-7, 8, 10, 48)</bounds>
+          <image class="Image">
+            <ImageResID>-619</ImageResID>
+            </image>
+          <fgColor>01000000</fgColor>
+          <bgColor>01000000</bgColor>
+          <textRec class="textHair">
+            <mode>82948</mode>
+            <text>"Core.vi"</text>
+            <bgColor>01000000</bgColor>
+            <fr elements="1">
+              <SL__arrayElement class="fontRun">
+                <fontid>1</fontid>
+                </SL__arrayElement>
+              </fr>
+            </textRec>
+          </label>
+        <bounds>(118, 166, 150, 198)</bounds>
+        <shortCount>6</shortCount>
+        <clumpNum>393221</clumpNum>
+        <connectorTM>TypeID(55)</connectorTM>
+        <dynLink class="dynLink" uid="170">
+          <objFlags>262144</objFlags>
+          </dynLink>
+        </SL__arrayElement>
+      <SL__arrayElement uid="642" />
+      <SL__arrayElement uid="262" />
+      <SL__arrayElement uid="218" />
+      <SL__arrayElement uid="136" />
+      <SL__arrayElement uid="133" />
+      </zPlaneList>
+    <nodeList elements="4">
+      <SL__arrayElement class="sRN" uid="127">
+        <objFlags>16384</objFlags>
+        <termList elements="5">
+          <SL__arrayElement class="fPTerm" uid="133">
+            <objFlags>131136</objFlags>
+            <dco uid="51" />
+            <bounds>(138, 61, 154, 93)</bounds>
+            <label class="label" uid="134">
+              <objFlags>1507650</objFlags>
+              <partID>16</partID>
+              <howGrow>4096</howGrow>
+              <bounds>(-17, 0, 0, 94)</bounds>
+              <image class="Image">
+                <ImageResID>-619</ImageResID>
+                </image>
+              <fgColor>01000000</fgColor>
+              <bgColor>01000000</bgColor>
+              <textRec class="textHair">
+                <flags>33280</flags>
+                <mode>17412</mode>
+                <bgColor>01000000</bgColor>
+                </textRec>
+              </label>
+            </SL__arrayElement>
+          <SL__arrayElement class="fPTerm" uid="136">
+            <objFlags>163904</objFlags>
+            <dco uid="93" />
+            <bounds>(138, 233, 154, 265)</bounds>
+            <label class="label" uid="137">
+              <objFlags>1507650</objFlags>
+              <partID>16</partID>
+              <howGrow>4096</howGrow>
+              <bounds>(-17, 0, 0, 49)</bounds>
+              <image class="Image">
+                <ImageResID>-619</ImageResID>
+                </image>
+              <fgColor>01000000</fgColor>
+              <bgColor>01000000</bgColor>
+              <textRec class="textHair">
+                <flags>33792</flags>
+                <mode>17412</mode>
+                <bgColor>01000000</bgColor>
+                </textRec>
+              </label>
+            </SL__arrayElement>
+          <SL__arrayElement class="fPTerm" uid="218">
+            <objFlags>131136</objFlags>
+            <dco uid="215" />
+            <bounds>(90, 61, 106, 93)</bounds>
+            <label class="label" uid="219">
+              <objFlags>1507650</objFlags>
+              <partID>16</partID>
+              <howGrow>4096</howGrow>
+              <bounds>(-17, 0, 0, 64)</bounds>
+              <image class="Image">
+                <ImageResID>-619</ImageResID>
+                </image>
+              <fgColor>01000000</fgColor>
+              <bgColor>01000000</bgColor>
+              <textRec class="textHair">
+                <flags>32768</flags>
+                <mode>17412</mode>
+                <bgColor>01000000</bgColor>
+                </textRec>
+              </label>
+            </SL__arrayElement>
+          <SL__arrayElement class="fPTerm" uid="262">
+            <objFlags>163904</objFlags>
+            <dco uid="259" />
+            <bounds>(90, 233, 106, 265)</bounds>
+            <label class="label" uid="263">
+              <objFlags>1507650</objFlags>
+              <partID>16</partID>
+              <howGrow>4096</howGrow>
+              <bounds>(-17, 0, 0, 72)</bounds>
+              <image class="Image">
+                <ImageResID>-619</ImageResID>
+                </image>
+              <fgColor>01000000</fgColor>
+              <bgColor>01000000</bgColor>
+              <textRec class="textHair">
+                <flags>32768</flags>
+                <mode>17412</mode>
+                <bgColor>01000000</bgColor>
+                </textRec>
+              </label>
+            </SL__arrayElement>
+          <SL__arrayElement class="fPTerm" uid="642">
+            <objFlags>131136</objFlags>
+            <dco uid="638" />
+            <bounds>(186, 61, 202, 93)</bounds>
+            <label class="label" uid="647">
+              <objFlags>1507650</objFlags>
+              <partID>16</partID>
+              <howGrow>4096</howGrow>
+              <bounds>(-17, 0, 0, 53)</bounds>
+              <image class="Image">
+                <ImageResID>-619</ImageResID>
+                </image>
+              <fgColor>01000000</fgColor>
+              <bgColor>01000000</bgColor>
+              <textRec class="textHair">
+                <flags>34304</flags>
+                <mode>17412</mode>
+                <bgColor>01000000</bgColor>
+                </textRec>
+              </label>
+            </SL__arrayElement>
+          </termList>
+        <bounds>(0, 0, 0, 0)</bounds>
+        <shortCount>1</shortCount>
+        <clumpNum>196611</clumpNum>
+        </SL__arrayElement>
+      <SL__arrayElement uid="6" />
+      <SL__arrayElement uid="115" />
+      <SL__arrayElement uid="271" />
+      </nodeList>
+    <signalList elements="5">
+      <SL__arrayElement class="signal" uid="184">
+        <objFlags>131072</objFlags>
+        <termList elements="4">
+          <SL__arrayElement uid="218" />
+          <SL__arrayElement uid="169" />
+          <SL__arrayElement uid="319" />
+          <SL__arrayElement uid="252" />
+          </termList>
+        <state>1</state>
+        <compressedWireTable>0800080706000303004C1D2711111811</compressedWireTable>
+        <lastSignalKind>-31888</lastSignalKind>
+        </SL__arrayElement>
+      <SL__arrayElement class="signal" uid="181">
+        <termList elements="2">
+          <SL__arrayElement uid="133" />
+          <SL__arrayElement uid="160" />
+          </termList>
+        <state>1</state>
+        <compressedWireTable>0208</compressedWireTable>
+        <lastSignalKind>-31920</lastSignalKind>
+        </SL__arrayElement>
+      <SL__arrayElement class="signal" uid="178">
+        <termList elements="2">
+          <SL__arrayElement uid="642" />
+          <SL__arrayElement uid="154" />
+          </termList>
+        <state>1</state>
+        <compressedWireTable>03080165</compressedWireTable>
+        <lastSignalKind>289</lastSignalKind>
+        </SL__arrayElement>
+      <SL__arrayElement class="signal" uid="175">
+        <objFlags>131072</objFlags>
+        <termList elements="2">
+          <SL__arrayElement uid="145" />
+          <SL__arrayElement uid="262" />
+          </termList>
+        <state>1</state>
+        <compressedWireTable>040801001A18</compressedWireTable>
+        <lastSignalKind>-31888</lastSignalKind>
+        </SL__arrayElement>
+      <SL__arrayElement class="signal" uid="172">
+        <termList elements="2">
+          <SL__arrayElement uid="125" />
+          <SL__arrayElement uid="136" />
+          </termList>
+        <state>1</state>
+        <compressedWireTable>0208</compressedWireTable>
+        <lastSignalKind>-31920</lastSignalKind>
+        </SL__arrayElement>
+      </signalList>
+    <bgColor>00FFFFFF</bgColor>
+    <firstNodeIdx>1</firstNodeIdx>
+    </root>
+  <pBounds>(0, 18, 223, 325)</pBounds>
+  <dBounds>(-29, -15, 257, 381)</dBounds>
+  <origin>(-1677, 595)</origin>
+  <instrStyle>31</instrStyle>
+  </SL__rootObject>

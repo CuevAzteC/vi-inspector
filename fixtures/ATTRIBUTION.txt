@@ -1,0 +1,2 @@
+Fixtures from https://github.com/tomsoftware/VI-Explorer-VI
+MIT License, Copyright (c) 2016 Thomas Zeugner

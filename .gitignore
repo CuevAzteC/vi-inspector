@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+mvp_report/
+mvp_report_gt/
+mvp_report_gt.zip
+audit_findings*.json
+vi_images_upload/
+.DS_Store
