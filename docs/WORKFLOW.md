@@ -10,10 +10,21 @@ pip install vi-inspector
 vi-inspector review path/to/project --html report/
 ```
 
-Open `report/index.html`: every VI with findings, each finding shown next
-to the rendered block diagram. This is the "is this tool telling the
+Open `report/index.html`: a Project-Explorer-style sidebar lists every VI
+in its folder hierarchy with severity dots — pick a VI to see its findings
+next to the rendered block diagram. This is the "is this tool telling the
 truth about my code?" step — spot-check a few findings against diagrams
 you know.
+
+The report speaks LabVIEW:
+
+- **Block diagram / Front panel tabs** — `Ctrl+E` toggles, just like LabVIEW.
+- **Click a SubVI node** in the diagram to jump to its report page;
+  **double-click it** to open the `.vi` in LabVIEW (works when the report
+  is viewed from disk).
+- **Open in LabVIEW** / **Copy path** buttons on every VI page.
+- **Calls / Called by** hierarchy per VI, so you can walk the call chain.
+- Sidebar **search** and **hide-clean** toggle for big projects.
 
 ## 2. Triage: fix what's real, bless the rest
 
@@ -80,8 +91,10 @@ What happens on every PR:
 ## 5. Reading the output
 
 - **Text summary** (default): per-VI counts, exit code tells CI pass/fail.
-- **HTML report** (`--html`): browsable dashboard with diagram renders —
-  good for reviews and audits.
+- **HTML report** (`--html`): Project-Explorer-style dashboard with folder
+  tree, block-diagram / front-panel tabs (`Ctrl+E`), clickable SubVI nodes
+  (click = report page, double-click = open in LabVIEW), and per-VI
+  Calls / Called-by hierarchy — good for reviews and audits.
 - **JSON** (`--json`): machine-readable, `new: true/false` per finding —
   feed it to your own tooling.
 - **SARIF** (`--sarif`): GitHub code scanning / any SARIF viewer.

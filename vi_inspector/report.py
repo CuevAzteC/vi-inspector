@@ -1,18 +1,22 @@
 """HTML report generation for VI code reviews.
 
-Dashboard + per-VI pages with findings and embedded block-diagram renders.
-Dependency-free output: inline CSS, diagrams as inline SVG via lvkit.
+Project-Explorer-style dashboard: a folder-tree sidebar on every page,
+per-VI pages with findings, block-diagram / front-panel tabs (Ctrl+E
+toggles, like LabVIEW), double-click-to-open in LabVIEW, and Calls /
+Called-by navigation.
+
+Dependency-free output: inline CSS/JS, diagrams as inline SVG via lvkit.
 """
 from __future__ import annotations
 
 import csv
 import html
+import os
+import re
 import shutil
 from pathlib import Path, PurePath
 
-from lvkit.render import render_vi_file
-
-from .review import SEVERITY_ORDER, VIReview
+from .review import SEVERITY_ORDER, VIReview, build_call_graph
 
 SEV_COLORS = {
     "high": "#c0392b",
@@ -24,11 +28,61 @@ SEV_COLORS = {
 CSS = """
 body{font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
 margin:0;color:#1a1a1a;background:#f7f8fa}
-.wrap{max-width:1100px;margin:0 auto;padding:24px}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:300px;flex:0 0 300px;background:#232a33;color:#cfd6dd;
+display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
+overflow:hidden}
+.side-head{padding:14px 16px 10px;border-bottom:1px solid #39424d}
+.side-head h2{font-size:14px;margin:0 0 2px;color:#fff;white-space:nowrap;
+overflow:hidden;text-overflow:ellipsis}
+.side-head .count{font-size:12px;color:#8b95a1}
+.side-tools{padding:10px 12px;border-bottom:1px solid #39424d}
+#tree-search{width:100%;box-sizing:border-box;padding:7px 10px;border-radius:6px;
+border:1px solid #39424d;background:#2e3742;color:#e6ebf0;font-size:13px}
+#tree-search::placeholder{color:#8b95a1}
+.side-opt{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:12.5px;
+color:#aeb7c2;cursor:pointer;user-select:none}
+.side-opt input{accent-color:#2e86c1}
+.tree{flex:1;overflow-y:auto;padding:8px 6px 20px;font-size:13.5px}
+.tree-folder .frow{display:flex;align-items:center;gap:6px;padding:4px 6px;
+border-radius:5px;cursor:pointer;color:#cfd6dd;white-space:nowrap}
+.tree-folder .frow:hover{background:#2e3742}
+.tree-folder .frow .arrow{font-size:10px;color:#8b95a1;width:12px;flex:0 0 12px;
+transition:transform .12s}
+.tree-folder.closed > .frow .arrow{transform:rotate(-90deg)}
+.tree-folder .fchildren{margin-left:14px;border-left:1px solid #39424d;
+padding-left:4px}
+.tree-folder.closed > .fchildren{display:none}
+.ficon{flex:0 0 auto}
+.fname{overflow:hidden;text-overflow:ellipsis}
+.fcount{margin-left:auto;font-size:11px;background:#39424d;border-radius:8px;
+padding:1px 7px;color:#aeb7c2;flex:0 0 auto}
+.tree-vi{display:flex;align-items:center;gap:7px;padding:4px 6px 4px 22px;
+border-radius:5px;color:#cfd6dd;text-decoration:none;white-space:nowrap}
+.tree-vi:hover{background:#2e3742;text-decoration:none;color:#fff}
+.tree-vi.active{background:#2e4a63;color:#fff}
+.tree-vi .vname{overflow:hidden;text-overflow:ellipsis}
+.tree-vi .vcnt{margin-left:auto;font-size:11px;color:#8b95a1;flex:0 0 auto}
+.dot{width:9px;height:9px;border-radius:50%;flex:0 0 9px}
+.dot.clean{background:#5a6572}
+.proj-link{display:block;margin:0 12px 10px;padding:8px 10px;background:#2e4a63;
+border-radius:6px;color:#fff;font-size:13px;text-align:center;text-decoration:none}
+.proj-link:hover{background:#38607f;text-decoration:none;color:#fff}
+.main{flex:1;min-width:0;padding:24px 28px;max-width:1200px}
+.vi-head{display:flex;justify-content:space-between;align-items:flex-start;
+gap:16px;margin-bottom:4px}
+.vi-head h1{font-size:24px;margin:0 0 4px;word-break:break-word}
+.actions{display:flex;gap:8px;flex:0 0 auto;padding-top:4px}
+.btn{display:inline-block;padding:8px 14px;border-radius:7px;font-size:13.5px;
+font-weight:600;border:1px solid #d5dae0;background:#fff;color:#2e86c1;
+cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{background:#f0f4f8;text-decoration:none}
+.btn.primary{background:#2e86c1;border-color:#2e86c1;color:#fff}
+.btn.primary:hover{background:#2574a8}
 .card{background:#fff;border:1px solid #e3e6ea;border-radius:10px;
 padding:18px 22px;margin-bottom:18px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-h1{font-size:26px;margin:0 0 6px}h2{font-size:19px;margin:0 0 10px}
-.sub{color:#666;font-size:14px;margin-bottom:16px}
+h2{font-size:19px;margin:0 0 10px}
+.sub{color:#666;font-size:13.5px;margin-bottom:14px;word-break:break-all}
 .badges{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
 .badge{border-radius:8px;padding:10px 16px;color:#fff;font-weight:600;font-size:15px}
 .badge small{display:block;font-weight:400;font-size:12px;opacity:.9}
@@ -36,7 +90,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}
 th{text-align:left;padding:8px 10px;border-bottom:2px solid #e3e6ea;color:#555;
 font-size:12px;text-transform:uppercase;letter-spacing:.04em}
 td{padding:8px 10px;border-bottom:1px solid #eef0f2;vertical-align:top}
-tr:hover td{background:#fafbfc}
+tbody tr:hover td{background:#fafbfc}
 a{color:#2e86c1;text-decoration:none}a:hover{text-decoration:underline}
 .finding{border-left:4px solid #ccc;padding:10px 14px;margin:10px 0;
 background:#fafbfc;border-radius:0 8px 8px 0}
@@ -46,21 +100,220 @@ background:#fafbfc;border-radius:0 8px 8px 0}
 border-radius:4px;padding:2px 7px;margin-right:8px;color:#555}
 .sev{display:inline-block;font-size:11px;font-weight:700;color:#fff;
 border-radius:4px;padding:2px 7px;margin-right:6px;text-transform:uppercase}
-.diagram{border:1px solid #e3e6ea;border-radius:8px;background:#fff;
-padding:12px;overflow:auto;margin-top:12px}
-.diagram svg{max-width:100%;height:auto}
+.tabs{display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.tab{padding:8px 16px;border:1px solid #d5dae0;background:#f4f6f8;border-radius:7px;
+font-size:13.5px;font-weight:600;color:#555;cursor:pointer}
+.tab.active{background:#232a33;border-color:#232a33;color:#fff}
+.tab:hover:not(.active){background:#e9edf1}
+.tab-hint{margin-left:auto;font-size:12px;color:#8b95a1}
+.tabpane{border:1px solid #e3e6ea;border-radius:8px;background:#fff;
+padding:12px;overflow:auto;cursor:default}
+.tabpane.dbl{cursor:pointer}
+.tabpane svg{max-width:100%;height:auto}
+.tabpane img{max-width:100%;height:auto;display:block}
+.hidden{display:none}
 .gt{border:1px solid #e3e6ea;border-radius:8px;background:#fff;
 padding:12px;overflow:auto;margin:6px 0 8px}
 .gt img{max-width:100%;height:auto;display:block}
 .metrics{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:#555;margin:8px 0}
 .metrics b{color:#1a1a1a}
 .nav{font-size:13px;margin-bottom:14px;color:#666}
+.call-list{list-style:none;margin:6px 0;padding:0;font-size:14px}
+.call-list li{padding:5px 0;border-bottom:1px solid #f0f2f4}
+.call-list li:last-child{border-bottom:none}
+.call-list .dot{display:inline-block;margin-right:8px;vertical-align:1px}
+.call-cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.call-cols h3{font-size:14px;margin:0 0 4px;color:#555}
 .footer{color:#999;font-size:12px;margin-top:24px;text-align:center}
+.filter-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;
+font-size:13.5px;color:#555}
+.filter-row select{padding:6px 10px;border-radius:6px;border:1px solid #d5dae0;
+font-size:13.5px}
+body.hide-clean .tree-vi[data-clean="1"]{display:none !important}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+background:#232a33;color:#fff;padding:10px 18px;border-radius:8px;font-size:13.5px;
+opacity:0;transition:opacity .25s;pointer-events:none;z-index:99}
+.toast.show{opacity:1}
+@media (max-width:900px){
+.sidebar{width:230px;flex-basis:230px}
+.call-cols{grid-template-columns:1fr}
+.vi-head{flex-direction:column}
+}
+"""
+
+JS = """
+function toast(msg){
+  var t=document.getElementById('toast');
+  if(!t){t=document.createElement('div');t.id='toast';t.className='toast';
+    document.body.appendChild(t);}
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},1800);
+}
+function openLabVIEW(){
+  var u=document.body.getAttribute('data-lvuri');
+  if(u){window.location.href=u;}
+  else{toast('No local file path recorded for this VI');}
+}
+function copyPath(){
+  var p=document.body.getAttribute('data-lvpath')||'';
+  function done(){toast('Path copied to clipboard');}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(p).then(done,function(){toast('Copy failed');});
+  }else{toast('Clipboard unavailable');}
+}
+/* --- tabs (Ctrl+E / Cmd+E toggles, like LabVIEW) --- */
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(function(t){
+    t.classList.toggle('active',t.getAttribute('data-tab')===name);});
+  document.querySelectorAll('.tabpane').forEach(function(p){
+    p.classList.toggle('hidden',p.id!=='pane-'+name);});
+}
+function cycleTab(){
+  var tabs=Array.prototype.map.call(document.querySelectorAll('.tab'),
+    function(t){return t.getAttribute('data-tab');});
+  if(!tabs.length)return;
+  var cur=tabs.indexOf(document.querySelector('.tab.active').getAttribute('data-tab'));
+  showTab(tabs[(cur+1)%tabs.length]);
+}
+document.querySelectorAll('.tab').forEach(function(t){
+  t.addEventListener('click',function(){showTab(t.getAttribute('data-tab'));});
+});
+document.addEventListener('keydown',function(e){
+  if((e.ctrlKey||e.metaKey)&&e.key&&e.key.toLowerCase()==='e'){
+    if(document.querySelector('.tab')){e.preventDefault();cycleTab();}
+  }
+});
+/* --- project tree --- */
+document.querySelectorAll('.tree-folder > .frow').forEach(function(row){
+  row.addEventListener('click',function(){
+    row.parentElement.classList.toggle('closed');});
+});
+var searchBox=document.getElementById('tree-search');
+if(searchBox){
+  searchBox.addEventListener('input',function(){
+    var s=searchBox.value.toLowerCase();
+    document.querySelectorAll('.tree-vi').forEach(function(v){
+      v.style.display=v.getAttribute('data-name').indexOf(s)>=0?'':'none';});
+    Array.prototype.slice.call(
+      document.querySelectorAll('.tree-folder')).reverse().forEach(function(f){
+      var any=Array.prototype.slice.call(
+        f.querySelectorAll('.tree-vi')).some(function(v){
+          return v.style.display!=='none';});
+      f.style.display=any?'':'none';});
+  });
+}
+var hideClean=document.getElementById('hide-clean');
+if(hideClean){
+  hideClean.addEventListener('change',function(){
+    document.body.classList.toggle('hide-clean',hideClean.checked);});
+}
+/* --- index table severity filter --- */
+var sevFilter=document.getElementById('sev-filter');
+if(sevFilter){
+  sevFilter.addEventListener('change',function(){
+    var v=sevFilter.value;
+    document.querySelectorAll('#vi-table tbody tr').forEach(function(tr){
+      var sev=tr.getAttribute('data-sev');
+      var show=v==='all'||sev===v||(v==='findings'&&sev!=='clean');
+      tr.style.display=show?'':'none';});
+  });
+}
 """
 
 
 def _sev_badge(sev: str) -> str:
     return f'<span class="sev" style="background:{SEV_COLORS[sev]}">{sev}</span>'
+
+
+def _worst_sev(review: VIReview) -> str | None:
+    for sev in SEVERITY_ORDER:
+        if review.by_severity(sev):
+            return sev
+    return None
+
+
+def _file_uri(path: str) -> str | None:
+    """file:// URI for 'Open in LabVIEW'. None when it cannot be built."""
+    try:
+        return Path(path).resolve().as_uri()
+    except Exception:  # noqa: BLE001 -- weird paths: hide the button instead
+        return None
+
+
+def _render_views(vi_path: str) -> tuple[str | None, str | None]:
+    """Render block diagram and front panel SVGs from a single graph load.
+
+    Returns (bd_svg, fp_svg); either may be None on failure. A bad render
+    must never kill the report.
+    """
+    try:
+        from lvkit.graph.core import InMemoryVIGraph
+        from lvkit.load_mode import LoadMode
+        from lvkit.render import render_vi
+        from lvkit.render.front_panel import render_vi_front_panel
+    except Exception:  # noqa: BLE001 -- lvkit too old: no diagrams
+        return None, None
+    for mode in (LoadMode.MINIMAL, LoadMode.NONE):
+        try:
+            graph = InMemoryVIGraph()
+            key = graph.load_vi(Path(vi_path), mode=mode, layout=True)
+            name = key or graph.resolve_vi_name(Path(vi_path).name)
+            bd = render_vi(graph, name)
+            try:
+                fp = render_vi_front_panel(graph, name)
+            except Exception:  # noqa: BLE001 -- FP optional
+                fp = None
+            return bd, fp
+        except Exception:  # noqa: BLE001 -- degrade to NONE, then give up
+            continue
+    return None, None
+
+
+def _inject_subvi_links(bd_svg: str | None, vi_path: str,
+                        page_for: dict[str, str]) -> str | None:
+    """Make SubVI nodes in the diagram clickable.
+
+    The lvkit renderer tags every SubVI node group with
+    ``data-lv-vi-rel`` -- the callee's .vi path relative to the rendered
+    VI's directory. We resolve it and add:
+
+    - ``data-callee-page``: this report's page for the callee (in-report
+      navigation, single click)
+    - ``data-callee-open``: file:// URI of the callee (double-click opens
+      the .vi in LabVIEW, exactly like LabVIEW's own double-click)
+
+    Callees that exist on disk but were not reviewed still get
+    double-click-to-open (e.g. vi.lib VIs). JS in the page supplies the
+    behavior; the SVG stays a static document otherwise.
+    """
+    if not bd_svg:
+        return bd_svg
+    vi_dir = Path(vi_path).parent
+    pattern = re.compile(r'<g([^>]*?)data-lv-vi-rel="([^"]+)"([^>]*)>')
+
+    def _one(m: re.Match) -> str:
+        attrs, rel = m.group(1), m.group(2)
+        if "lv-node" not in attrs:
+            return m.group(0)
+        if not rel.lower().endswith((".vi", ".vim", ".ctl")):
+            return m.group(0)
+        try:
+            callee = (vi_dir / rel).resolve()
+        except Exception:  # noqa: BLE001 -- odd path: leave the node alone
+            return m.group(0)
+        page = page_for.get(os.path.normcase(str(callee)))
+        uri = _file_uri(str(callee)) if callee.exists() else None
+        if not page and not uri:
+            return m.group(0)
+        extra = ""
+        if page:
+            extra += f' data-callee-page="{html.escape(page, quote=True)}"'
+        if uri:
+            extra += (f' data-callee-open="{html.escape(uri, quote=True)}"')
+        return f"<g{attrs}data-lv-vi-rel=\"{html.escape(rel, quote=True)}\"" \
+               f"{m.group(3)}{extra}>"
+
+    return pattern.sub(_one, bd_svg)
 
 
 def _finding_html(f) -> str:
@@ -73,42 +326,123 @@ def _finding_html(f) -> str:
     )
 
 
-def _render_diagram(vi_path: str) -> str:
+# ---------------------------------------------------------------------------
+# Project tree sidebar
+# ---------------------------------------------------------------------------
+
+def _common_root(reviews: list[VIReview]) -> Path | None:
     try:
-        svg = render_vi_file(Path(vi_path))
-    except Exception as e:  # noqa: BLE001 -- a bad render must not kill the report
-        return f"<p><em>Diagram render unavailable: {html.escape(str(e))}</em></p>"
-    if not svg:
-        return "<p><em>No block diagram.</em></p>"
-    return f'<div class="diagram">{svg}</div>'
+        common = Path(os.path.commonpath([r.vi_path for r in reviews]))
+    except ValueError:  # e.g. paths on different drives
+        return None
+    return common if common.is_dir() else common.parent
 
 
-def _ground_truth_html(gt: dict) -> str:
-    """Card with genuine LabVIEW-exported panel/diagram images.
+def _build_tree(reviews: list[VIReview], page_names: dict[str, str],
+                common_root: Path | None) -> dict:
+    """Nested {dirs: {name: node}, vis: [entries]} folder tree."""
+    root: dict = {"dirs": {}, "vis": []}
+    for r in reviews:
+        if common_root is not None:
+            try:
+                rel = Path(r.vi_path).relative_to(common_root)
+            except ValueError:
+                rel = Path(Path(r.vi_path).name)
+        else:
+            rel = Path(Path(r.vi_path).name)
+        node = root
+        for part in rel.parent.parts:
+            if part in (".", ""):
+                continue
+            node = node["dirs"].setdefault(part, {"dirs": {}, "vis": []})
+        node["vis"].append({
+            "name": r.vi_name,
+            "page": page_names[r.vi_path],
+            "sev": _worst_sev(r),
+            "n": len(r.findings),
+        })
+    return root
 
-    gt maps 'fp'/'bd' to hrefs relative to the per-VI page.
-    """
-    parts = [
-        '<div class="card"><h2>Ground truth &mdash; exported from LabVIEW</h2>',
-        '<p class="sub">Genuine front panel and block diagram rendered by '
-        "LabVIEW via PrintVIToHTML. Use these to validate the findings "
-        "above and the parser render below.</p>",
-    ]
-    if gt.get("fp"):
+
+def _subtree_stats(node: dict) -> tuple[int, str | None]:
+    """(total findings, worst severity) for a folder subtree."""
+    total = sum(v["n"] for v in node["vis"])
+    worst = next((v["sev"] for v in node["vis"] if v["sev"]), None)
+    for sub in node["dirs"].values():
+        st, sw = _subtree_stats(sub)
+        total += st
+        if sw and (worst is None or
+                   SEVERITY_ORDER[sw] < SEVERITY_ORDER[worst]):
+            worst = sw
+    return total, worst
+
+
+def _tree_html(node: dict, active_page: str | None = None,
+               depth: int = 0) -> str:
+    parts = []
+    for dname in sorted(node["dirs"], key=str.lower):
+        sub = node["dirs"][dname]
+        total, worst = _subtree_stats(sub)
+        n_vis = sum(1 for _ in _iter_vis(sub))
+        dot = (f'<span class="dot" style="background:{SEV_COLORS[worst]}"></span>'
+               if worst else '<span class="dot clean"></span>')
+        kids = _tree_html(sub, active_page, depth + 1)
         parts.append(
-            '<h3 style="font-size:15px;margin:12px 0 6px">Front panel</h3>'
-            f'<div class="gt"><img src="{html.escape(gt["fp"])}" '
-            'alt="Front panel (LabVIEW export)"></div>'
-        )
-    if gt.get("bd"):
+            f'<div class="tree-folder{" closed" if depth > 0 else ""}">'
+            f'<div class="frow" title="{html.escape(dname)}">'
+            f'<span class="arrow">&#9662;</span>'
+            f'<span class="ficon">&#128193;</span>{dot}'
+            f'<span class="fname">{html.escape(dname)}</span>'
+            f'<span class="fcount">{n_vis}</span></div>'
+            f'<div class="fchildren">{kids}</div></div>')
+    for v in sorted(node["vis"], key=lambda v: v["name"].lower()):
+        dot = (f'<span class="dot" style="background:{SEV_COLORS[v["sev"]]}"></span>'
+               if v["sev"] else '<span class="dot clean"></span>')
+        cnt = f'<span class="vcnt">{v["n"]}</span>' if v["n"] else ""
+        active = ' active' if v["page"] == active_page else ""
         parts.append(
-            '<h3 style="font-size:15px;margin:12px 0 6px">Block diagram</h3>'
-            f'<div class="gt"><img src="{html.escape(gt["bd"])}" '
-            'alt="Block diagram (LabVIEW export)"></div>'
-        )
-    parts.append("</div>")
+            f'<a class="tree-vi{active}" href="{html.escape(v["page"], quote=True)}"'
+            f' data-name="{html.escape(v["name"].lower(), quote=True)}"'
+            f' data-clean="{"1" if not v["n"] else "0"}"'
+            f' title="{html.escape(v["name"])}">{dot}'
+            f'<span class="vname">{html.escape(v["name"])}</span>{cnt}</a>')
     return "".join(parts)
 
+
+def _iter_vis(node: dict):
+    yield from node["vis"]
+    for sub in node["dirs"].values():
+        yield from _iter_vis(sub)
+
+
+def _sidebar_html(project_name: str, tree: dict,
+                  active_page: str | None = None,
+                  lvproj_uri: str | None = None) -> str:
+    n_vis = sum(1 for _ in _iter_vis(tree))
+    n_findings = sum(v["n"] for v in _iter_vis(tree))
+    proj = ""
+    if lvproj_uri:
+        proj = (
+            f'<a class="proj-link" href="{html.escape(lvproj_uri, quote=True)}"'
+            ' title="Open the .lvproj in LabVIEW (works when viewing this'
+            ' report from disk)">&#9656; Open project in LabVIEW</a>')
+    return (
+        '<aside class="sidebar">'
+        f'<div class="side-head"><h2>{html.escape(project_name)}</h2>'
+        f'<div class="count">{n_vis} VIs &middot; {n_findings} findings</div></div>'
+        f"{proj}"
+        '<div class="side-tools">'
+        '<input id="tree-search" type="text" placeholder="Filter VIs&hellip;"'
+        ' autocomplete="off">'
+        '<label class="side-opt"><input type="checkbox" id="hide-clean">'
+        " Hide VIs with no findings</label></div>"
+        f'<div class="tree">{_tree_html(tree, active_page)}</div>'
+        "</aside>")
+
+
+# ---------------------------------------------------------------------------
+# Ground truth (genuine LabVIEW exports)
+# ---------------------------------------------------------------------------
 
 def _load_ground_truth(gt_dir: str | Path) -> dict:
     """Read an export_vi_images.py manifest.
@@ -141,56 +475,285 @@ def _match_ground_truth(review: VIReview, gt_map: dict) -> dict | None:
     return None
 
 
-def _vi_page(review: VIReview, back_link: str = "index.html",
-             with_diagram: bool = True,
-             ground_truth: dict | None = None) -> str:
+def _gt_inner_html(gt: dict) -> str:
+    """Inner HTML for the 'LabVIEW export' tab."""
+    parts = [
+        '<p class="sub">Genuine front panel and block diagram rendered by '
+        "LabVIEW via PrintVIToHTML. Use these to validate the findings "
+        "above and the parser render.</p>",
+    ]
+    if gt.get("fp"):
+        parts.append(
+            '<h3 style="font-size:15px;margin:12px 0 6px">Front panel</h3>'
+            f'<div class="gt"><img src="{html.escape(gt["fp"])}" '
+            'alt="Front panel (LabVIEW export)"></div>'
+        )
+    if gt.get("bd"):
+        parts.append(
+            '<h3 style="font-size:15px;margin:12px 0 6px">Block diagram</h3>'
+            f'<div class="gt"><img src="{html.escape(gt["bd"])}" '
+            'alt="Block diagram (LabVIEW export)"></div>'
+        )
+    return "".join(parts)
+
+
+# ---------------------------------------------------------------------------
+# Per-VI page
+# ---------------------------------------------------------------------------
+
+def _calls_html(review: VIReview, graph: dict, page_names: dict[str, str],
+                sev_by_path: dict[str, str | None]) -> str:
+    entry = graph.get(review.vi_path, {})
+    calls = entry.get("calls", [])
+    called_by = entry.get("called_by", [])
+    external = entry.get("external", 0)
+
+    def _li(p: str) -> str:
+        sev = sev_by_path.get(p)
+        dot = (f'<span class="dot" style="background:{SEV_COLORS[sev]}"></span>'
+               if sev else '<span class="dot clean"></span>')
+        return (f"<li>{dot}"
+                f'<a href="{html.escape(page_names[p], quote=True)}">'
+                f"{html.escape(Path(p).name)}</a></li>")
+
+    calls_list = "".join(_li(p) for p in calls) or \
+        "<li><em>No SubVI calls into reviewed VIs.</em></li>"
+    if external:
+        calls_list += (f"<li><em>+ {external} call(s) to VIs outside this "
+                       "review (vi.lib, unreviewed files).</em></li>")
+    by_list = "".join(_li(p) for p in called_by) or \
+        "<li><em>Not called by any reviewed VI (top-level or unused).</em></li>"
+    return (
+        '<div class="call-cols"><div><h3>Calls</h3>'
+        f'<ul class="call-list">{calls_list}</ul></div>'
+        "<div><h3>Called by</h3>"
+        f'<ul class="call-list">{by_list}</ul></div></div>')
+
+
+def _diagram_pane(svg: str | None, pane_id: str, label: str,
+                  lv_hint: bool = True) -> str:
+    if svg:
+        dbl = (' class="tabpane dbl" ondblclick="openLabVIEW()"'
+               f' title="Double-click to open this VI in LabVIEW"'
+               if lv_hint else ' class="tabpane"')
+        return f'<div id="{pane_id}"{dbl}>{svg}</div>'
+    return (f'<div id="{pane_id}" class="tabpane">'
+            f"<p><em>{html.escape(label)} unavailable.</em></p></div>")
+
+
+NODE_CLICK_JS = """
+/* SubVI nodes: click -> callee page, double-click -> open .vi in LabVIEW */
+document.querySelectorAll('.lv-node[data-callee-page],.lv-node[data-callee-open]')
+.forEach(function(n){
+  n.style.cursor='pointer';
+  var t=n.querySelector('title');
+  if(t){t.textContent=t.textContent+
+    '\\n\\nClick: open in this report. Double-click: open in LabVIEW.';}
+  if(n.hasAttribute('data-callee-page')){
+    n.addEventListener('click',function(){
+      window.location.href=n.getAttribute('data-callee-page');});
+  }
+  n.addEventListener('dblclick',function(e){
+    e.stopPropagation();
+    var u=n.getAttribute('data-callee-open');
+    if(u){window.location.href=u;}
+    else if(n.hasAttribute('data-callee-page')){
+      window.location.href=n.getAttribute('data-callee-page');}
+  });
+});
+"""
+
+
+def _vi_page(review: VIReview, sidebar: str, page_names: dict[str, str],
+             sev_by_path: dict[str, str | None], graph: dict,
+             bd_svg: str | None, fp_svg: str | None,
+             ground_truth: dict | None) -> str:
     counts = {s: len(review.by_severity(s)) for s in SEVERITY_ORDER}
-    metrics = review.metrics
-    m_html = "".join(
-        f"<span><b>{v}</b> {k.replace('_', ' ')}</span>"
-        for k, v in metrics.items()
-    )
+    badges = "".join(
+        f'<span class="badge" style="background:{SEV_COLORS[s]}">{counts[s]}'
+        f"<small>{s}</small></span>"
+        for s in SEVERITY_ORDER if counts[s]
+    ) or '<span class="sub">No findings &mdash; clean review</span>'
+
+    lv_uri = _file_uri(review.vi_path)
+    open_btn = ""
+    if lv_uri:
+        open_btn = (
+            f'<a class="btn primary" href="{html.escape(lv_uri, quote=True)}"'
+            ' title="Open this VI in LabVIEW (works when viewing the report'
+            ' from disk)">Open in LabVIEW</a>')
+
     if not review.parse_ok:
-        body = f'<div class="card"><h2>Parse failed</h2><p>{html.escape(review.parse_error or "")}</p></div>'
+        findings_card = (
+            '<div class="card"><h2>Parse failed</h2>'
+            f"<p>{html.escape(review.parse_error or '')}</p></div>")
+        diagrams_card = ""
     else:
         findings = "".join(_finding_html(f) for f in review.findings) or \
             "<p>No findings. Clean review.</p>"
-        diagram = _render_diagram(review.vi_path) if with_diagram else \
-            "<p><em>Diagram omitted in this build.</em></p>"
-        gt_html = _ground_truth_html(ground_truth) if ground_truth else ""
-        body = (
-            f'<div class="card"><h2>Metrics</h2><div class="metrics">{m_html}</div></div>'
-            f'<div class="card"><h2>Findings ({len(review.findings)})</h2>{findings}</div>'
-            f"{gt_html}"
-            f'<div class="card"><h2>Block diagram (parser render)</h2>{diagram}</div>'
-        )
-    badges = "".join(
-        f'<span class="badge" style="background:{SEV_COLORS[s]}">{counts[s]}<small>{s}</small></span>'
-        for s in SEVERITY_ORDER if counts[s]
+        findings_card = (
+            f'<div class="card"><h2>Findings ({len(review.findings)})</h2>'
+            f"{findings}</div>")
+
+        tabs = [
+            '<button class="tab active" data-tab="bd">Block diagram</button>',
+            '<button class="tab" data-tab="fp">Front panel</button>',
+        ]
+        panes = [
+            _diagram_pane(bd_svg, "pane-bd", "Block diagram render"),
+            _diagram_pane(fp_svg, "pane-fp", "Front panel render"),
+        ]
+        if ground_truth:
+            tabs.append(
+                '<button class="tab" data-tab="gt">LabVIEW export</button>')
+            panes.append(
+                f'<div id="pane-gt" class="tabpane hidden">'
+                f"{_gt_inner_html(ground_truth)}</div>")
+        diagrams_card = (
+            '<div class="card"><h2>Diagram</h2>'
+            '<div class="tabs">' + "".join(tabs) +
+            '<span class="tab-hint">Ctrl+E toggles &middot; double-click a '
+            "SubVI to open it &middot; double-click empty space opens this "
+            "VI</span></div>"
+            + "".join(panes) + "</div>")
+
+    metrics = "".join(
+        f"<span><b>{v}</b> {html.escape(k.replace('_', ' '))}</span>"
+        for k, v in review.metrics.items()
     )
-    return f"""<!DOCTYPE html><html><head><meta charset="utf-8">
-<title>{html.escape(review.vi_name)} - VI Review</title><style>{CSS}</style></head>
-<body><div class="wrap">
-<div class="nav"><a href="{back_link}">&larr; Back to project report</a></div>
-<h1>{html.escape(review.vi_name)}</h1>
-<div class="sub">{html.escape(review.vi_path)}</div>
-<div class="badges">{badges or '<span class="sub">No findings</span>'}</div>
-{body}
-<div class="footer">Generated by vi-inspector MVP (lvkit engine, Apache-2.0)</div>
-</div></body></html>"""
+    body = (
+        f'<div class="vi-head"><div><h1>{html.escape(review.vi_name)}</h1>'
+        f'<div class="sub">{html.escape(review.vi_path)}</div>'
+        f'<div class="badges">{badges}</div></div>'
+        f'<div class="actions">{open_btn}'
+        '<button class="btn" onclick="copyPath()" '
+        'title="Copy the VI file path to the clipboard">Copy path</button>'
+        "</div></div>"
+        f"{findings_card}"
+        f"{diagrams_card}"
+        '<div class="card"><h2>Hierarchy</h2>'
+        f"{_calls_html(review, graph, page_names, sev_by_path)}</div>"
+        '<div class="card"><h2>Metrics</h2>'
+        f'<div class="metrics">{metrics}</div></div>'
+    )
+    body_attrs = ""
+    if lv_uri:
+        body_attrs = (
+            f' data-lvuri="{html.escape(lv_uri, quote=True)}"'
+            f' data-lvpath="{html.escape(str(Path(review.vi_path).resolve()), quote=True)}"')
+    return (
+        "<!DOCTYPE html><html><head><meta charset=\"utf-8\">"
+        f"<title>{html.escape(review.vi_name)} - VI Review</title>"
+        f"<style>{CSS}</style></head>"
+        f"<body{body_attrs}>"
+        '<div class="layout">'
+        f"{sidebar}"
+        '<main class="main">'
+        f'<div class="nav"><a href="index.html">&larr; Project report</a></div>'
+        f"{body}"
+        '<div class="footer">Generated by vi-inspector (lvkit engine, '
+        "Apache-2.0)</div>"
+        "</main></div>"
+        f"<script>{JS}</script><script>{NODE_CLICK_JS}</script>"
+        "</body></html>")
 
 
-def generate_report(reviews: list[VIReview], project_name: str, out_dir: str | Path,
+# ---------------------------------------------------------------------------
+# Dashboard
+# ---------------------------------------------------------------------------
+
+def _index_page(project_name: str, reviews: list[VIReview], sidebar: str,
+                page_names: dict[str, str],
+                totals: dict[str, int]) -> str:
+    from collections import Counter
+    ok = [r for r in reviews if r.parse_ok]
+
+    def sort_key(r: VIReview):
+        return (-len(r.by_severity("high")), -len(r.by_severity("medium")),
+                r.vi_name)
+
+    rows = []
+    for r in sorted(ok, key=sort_key):
+        m = r.metrics
+        worst = _worst_sev(r) or "clean"
+        cells = "".join(
+            f"<td>{len(r.by_severity(s))}</td>" for s in ("high", "medium", "low")
+        )
+        rows.append(
+            f'<tr data-sev="{worst}">'
+            f'<td><a href="{html.escape(page_names[r.vi_path], quote=True)}">'
+            f"{html.escape(r.vi_name)}</a></td>"
+            f"<td>{m.get('nodes', '?')}</td><td>{m.get('wires', '?')}</td>"
+            f"<td>{m.get('structures', '?')}</td>"
+            f"<td>{m.get('subvi_calls', '?')}</td>{cells}</tr>"
+        )
+    failed = [r for r in reviews if not r.parse_ok]
+    for r in failed:
+        rows.append(
+            f'<tr data-sev="clean"><td>{html.escape(r.vi_name)}</td>'
+            f'<td colspan="7"><em>Parse failed: '
+            f"{html.escape(r.parse_error or '')}</em></td></tr>"
+        )
+
+    rule_counts = Counter(f.rule_id for r in ok for f in r.findings)
+    rule_rows = "".join(
+        f"<tr><td>{html.escape(rid)}</td><td>{c}</td></tr>"
+        for rid, c in rule_counts.most_common()
+    )
+    badges = "".join(
+        f'<span class="badge" style="background:{SEV_COLORS[s]}">{totals[s]}'
+        f"<small>{s}</small></span>"
+        for s in SEVERITY_ORDER
+    )
+    return (
+        "<!DOCTYPE html><html><head><meta charset=\"utf-8\">"
+        f"<title>{html.escape(project_name)} - VI Code Review</title>"
+        f"<style>{CSS}</style></head><body>"
+        '<div class="layout">'
+        f"{sidebar}"
+        '<main class="main">'
+        f"<h1>{html.escape(project_name)}</h1>"
+        f'<div class="sub">Automated LabVIEW code review &mdash; '
+        f"{len(ok)}/{len(reviews)} VIs parsed, no LabVIEW required</div>"
+        f'<div class="badges">{badges}</div>'
+        '<div class="card"><h2>Findings by rule</h2>'
+        "<table><tr><th>Rule</th><th>Count</th></tr>"
+        f"{rule_rows}</table></div>"
+        '<div class="card"><h2>VIs</h2>'
+        '<div class="filter-row"><label for="sev-filter">Show:</label>'
+        '<select id="sev-filter">'
+        '<option value="all">All VIs</option>'
+        '<option value="high">High severity</option>'
+        '<option value="medium">Medium severity</option>'
+        '<option value="findings">Any findings</option>'
+        '<option value="clean">Clean only</option>'
+        "</select></div>"
+        '<table id="vi-table"><tr><th>VI</th><th>Nodes</th><th>Wires</th>'
+        "<th>Structures</th><th>SubVI calls</th>"
+        "<th>High</th><th>Med</th><th>Low</th></tr>"
+        f"{''.join(rows)}</table></div>"
+        '<div class="footer">Generated by vi-inspector (lvkit engine, '
+        "Apache-2.0). Rules: ERR-1 unwired error terminals on SubVI calls, "
+        "ERR-1b broken error chains, ERR-2 missing error handling, WIRE-1 "
+        "unwired required SubVI inputs, RACE-1 local variables, CPLX-1 large "
+        "diagrams.</div>"
+        "</main></div>"
+        f"<script>{JS}</script>"
+        "</body></html>")
+
+
+def generate_report(reviews: list[VIReview], project_name: str,
+                    out_dir: str | Path,
                     max_diagrams: int | None = None,
                     ground_truth_dir: str | Path | None = None) -> Path:
-    """Write dashboard + per-VI pages. Returns the index.html path.
+    """Write the Project-Explorer-style report. Returns the index.html path.
 
-    max_diagrams caps how many per-VI pages embed a rendered diagram
+    max_diagrams caps how many per-VI pages embed rendered diagrams
     (rendering is the slow step); all VIs still get findings pages.
 
     ground_truth_dir points at an export_vi_images.py output folder; its
-    manifest.csv maps VIs to genuine LabVIEW-rendered PNGs, which are
-    copied into the report and embedded on each VI page.
+    manifest.csv maps VIs to genuine LabVIEW-rendered PNGs, shown on a
+    "LabVIEW export" tab per VI.
     """
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -215,59 +778,39 @@ def generate_report(reviews: list[VIReview], project_name: str, out_dir: str | P
                 gt[role] = f"ground_truth/{rel}"
         return gt or None
 
-    # Per-VI pages (render diagrams only for the first max_diagrams VIs;
-    # rendering is the slow step, findings are always complete)
-    page_names: dict[str, str] = {}
-    for i, r in enumerate(reviews):
-        fname = f"vi_{i:03d}.html"
-        page_names[r.vi_path] = fname
-        with_diagram = max_diagrams is None or i < max_diagrams
-        html_text = _vi_page(r, with_diagram=with_diagram,
-                             ground_truth=_gt_for(r))
-        (out / fname).write_text(html_text, encoding="utf-8")
+    page_names = {r.vi_path: f"vi_{i:03d}.html" for i, r in enumerate(reviews)}
+    graph = build_call_graph(reviews)
+    sev_by_path = {r.vi_path: _worst_sev(r) for r in reviews}
+    common = _common_root(reviews)
+    tree = _build_tree(reviews, page_names, common)
+    # normcase absolute-path -> page, for SubVI click-link injection
+    page_for = {os.path.normcase(str(Path(p).resolve())): pg
+                for p, pg in page_names.items()}
 
-    # Dashboard rows sorted by high-severity count desc
-    def sort_key(r: VIReview):
-        return (-len(r.by_severity("high")), -len(r.by_severity("medium")), r.vi_name)
-    rows = []
-    for r in sorted(ok, key=sort_key):
-        m = r.metrics
-        cells = "".join(
-            f"<td>{len(r.by_severity(s))}</td>" for s in ("high", "medium", "low")
-        )
-        rows.append(
-            f'<tr><td><a href="{page_names[r.vi_path]}">{html.escape(r.vi_name)}</a></td>'
-            f"<td>{m.get('nodes', '?')}</td><td>{m.get('wires', '?')}</td>"
-            f"<td>{m.get('structures', '?')}</td><td>{m.get('subvi_calls', '?')}</td>"
-            f"{cells}</tr>"
-        )
-    # Rule summary
-    from collections import Counter
-    rule_counts = Counter(f.rule_id for r in ok for f in r.findings)
-    rule_rows = "".join(
-        f"<tr><td>{html.escape(rid)}</td><td>{c}</td></tr>"
-        for rid, c in rule_counts.most_common()
-    )
-    badges = "".join(
-        f'<span class="badge" style="background:{SEV_COLORS[s]}">{totals[s]}<small>{s}</small></span>'
-        for s in SEVERITY_ORDER
-    )
-    index = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
-<title>{html.escape(project_name)} - VI Code Review</title><style>{CSS}</style></head>
-<body><div class="wrap">
-<h1>{html.escape(project_name)}</h1>
-<div class="sub">Automated LabVIEW code review &mdash; {len(ok)}/{len(reviews)} VIs parsed, no LabVIEW required</div>
-<div class="badges">{badges}</div>
-<div class="card"><h2>Findings by rule</h2>
-<table><tr><th>Rule</th><th>Count</th></tr>{rule_rows}</table></div>
-<div class="card"><h2>VIs</h2>
-<table><tr><th>VI</th><th>Nodes</th><th>Wires</th><th>Structures</th>
-<th>SubVI calls</th><th>High</th><th>Med</th><th>Low</th></tr>
-{"".join(rows)}</table></div>
-<div class="footer">Generated by vi-inspector MVP (lvkit engine, Apache-2.0).
-Rules: ERR-1 unwired error terminals on SubVI calls, ERR-1b broken error chains,
-ERR-2 missing error handling, RACE-1 local variables, CPLX-1 large diagrams.</div>
-</div></body></html>"""
+    lvproj_uri = None
+    if common is not None:
+        lvprojs = sorted(common.glob("*.lvproj"))
+        if lvprojs:
+            lvproj_uri = _file_uri(str(lvprojs[0]))
+
+    sidebar_index = _sidebar_html(project_name, tree,
+                                  lvproj_uri=lvproj_uri)
+
+    for i, r in enumerate(reviews):
+        with_views = max_diagrams is None or i < max_diagrams
+        bd_svg, fp_svg = None, None
+        if with_views and r.parse_ok:
+            bd_svg, fp_svg = _render_views(r.vi_path)
+            bd_svg = _inject_subvi_links(bd_svg, r.vi_path, page_for)
+        sidebar = _sidebar_html(project_name, tree,
+                                active_page=page_names[r.vi_path],
+                                lvproj_uri=lvproj_uri)
+        html_text = _vi_page(r, sidebar, page_names, sev_by_path, graph,
+                             bd_svg, fp_svg, _gt_for(r))
+        (out / page_names[r.vi_path]).write_text(html_text, encoding="utf-8")
+
+    index_html = _index_page(project_name, reviews, sidebar_index,
+                             page_names, totals)
     index_path = out / "index.html"
-    index_path.write_text(index, encoding="utf-8")
+    index_path.write_text(index_html, encoding="utf-8")
     return index_path

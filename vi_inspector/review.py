@@ -54,6 +54,10 @@ class ReviewContext:
         cands = sorted(cands, key=lambda c: (str(Path(c).parent) != cdir, c))
         return cands[0]
 
+    def resolve_callee(self, caller_path: str, node_name: str) -> str | None:
+        """Public wrapper: callee file path for a SubVI call node, or None."""
+        return self._resolve_callee(caller_path, node_name)
+
     def callee_interface(
         self, caller_path: str, node_name: str
     ) -> tuple[str, dict[int, int], dict[int, str]] | None:
@@ -106,6 +110,9 @@ class VIReview:
     metrics: dict = field(default_factory=dict)
     parse_ok: bool = True
     parse_error: str | None = None
+    # Resolved callee file paths for plain SubVI calls (iUse) in this VI.
+    # Drives the report's Calls / Called-by navigation.
+    calls: list[str] = field(default_factory=list)
 
     def by_severity(self, sev: str) -> list[ReviewFinding]:
         return [f for f in self.findings if f.severity == sev]
@@ -293,6 +300,29 @@ def _rule_unwired_required_inputs(
             ))
 
 
+def _collect_calls(pvi: ParsedVI, review: VIReview,
+                   ctx: ReviewContext | None) -> None:
+    """Record resolved callee paths for plain SubVI calls (iUse).
+
+    Powers the report's Calls / Called-by navigation. Unresolvable callees
+    (vi.lib, missing files) are skipped, matching WIRE-1's fail-silent rule.
+    """
+    if ctx is None:
+        return
+    bd = pvi.block_diagram
+    seen: set[str] = set()
+    for node in bd.nodes:
+        if getattr(node, "node_type", None) != "iUse":
+            continue
+        raw_name = getattr(node, "name", None) or getattr(node, "label", None)
+        if not raw_name:
+            continue
+        callee = ctx.resolve_callee(review.vi_path, raw_name)
+        if callee and callee not in seen:
+            seen.add(callee)
+            review.calls.append(callee)
+
+
 def _rule_missing_error_handling(pvi: ParsedVI, review: VIReview) -> None:
     """ERR-2: VI exposes error in/out but wires no error cluster on the diagram."""
     pane_terms = [t for t in pvi.block_diagram.fp_terminals]
@@ -412,11 +442,40 @@ def review_vi(vi_path: str | Path,
     _rule_missing_error_handling(pvi, review)
     _rule_local_variables(pvi, review)
     _collect_metrics(pvi, review)
+    _collect_calls(pvi, review, ctx)
     review.findings = _dedupe_findings(review.findings)
     review.findings.sort(key=lambda f: SEVERITY_ORDER[f.severity])
     return review
 
 
-def review_many(vi_paths: list[str | Path]) -> list[VIReview]:
-    ctx = ReviewContext(vi_paths)
+def build_call_graph(reviews: list[VIReview]) -> dict[str, dict[str, list[str]]]:
+    """Calls / called-by map restricted to the reviewed set.
+
+    Returns {vi_path: {"calls": [...], "called_by": [...]}} with both lists
+    sorted by VI name. Callees outside the reviewed set (vi.lib, .vim,
+    unreviewed files) are counted but not linked.
+    """
+    reviewed = {r.vi_path for r in reviews}
+    graph: dict[str, dict[str, list[str]]] = {
+        r.vi_path: {"calls": [], "called_by": [], "external": 0} for r in reviews
+    }
+    for r in reviews:
+        for callee in r.calls:
+            if callee in reviewed:
+                graph[r.vi_path]["calls"].append(callee)
+                graph[callee]["called_by"].append(r.vi_path)
+            else:
+                graph[r.vi_path]["external"] += 1
+    for entry in graph.values():
+        entry["calls"] = sorted(set(entry["calls"]),
+                                key=lambda p: Path(p).name.lower())
+        entry["called_by"] = sorted(set(entry["called_by"]),
+                                    key=lambda p: Path(p).name.lower())
+    return graph
+
+
+def review_many(vi_paths: list[str | Path],
+                ctx: ReviewContext | None = None) -> list[VIReview]:
+    if ctx is None:
+        ctx = ReviewContext(vi_paths)
     return [review_vi(p, ctx) for p in vi_paths]

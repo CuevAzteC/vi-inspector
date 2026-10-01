@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from vi_inspector.vi import inspect_vi  # noqa: E402
 from vi_inspector.project import parse_project_file, summarize_project  # noqa: E402
-from vi_inspector.review import review_many, SEVERITY_ORDER  # noqa: E402
+from vi_inspector.review import review_many, SEVERITY_ORDER, ReviewContext  # noqa: E402
 from vi_inspector.report import generate_report  # noqa: E402
 
 
@@ -100,7 +100,8 @@ def cmd_review(args) -> int:
                                               recursive=True)))
         else:
             vi_paths.append(p)
-    reviews = review_many(vi_paths)
+    ctx = ReviewContext(vi_paths)
+    reviews = review_many(vi_paths, ctx)
 
     parse_failures = [r for r in reviews if not r.parse_ok]
     if parse_failures and not args.ignore_parse_errors:
