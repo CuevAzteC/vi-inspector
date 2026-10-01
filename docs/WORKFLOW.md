@@ -92,8 +92,10 @@ What happens on every PR:
 
 - **Text summary** (default): per-VI counts, exit code tells CI pass/fail.
 - **HTML report** (`--html`): Project-Explorer-style dashboard with folder
-  tree, block-diagram / front-panel tabs (`Ctrl+E`), clickable SubVI nodes
-  (click = report page, double-click = open in LabVIEW), and per-VI
+  tree, block-diagram / front-panel / connector-pane tabs (`Ctrl+E`),
+  clickable SubVI nodes (click = report page, double-click = open in
+  LabVIEW), click-a-finding to flash its node on the diagram, hover any
+  wire for its data type, a ◐ Theme toggle for dark mode, and per-VI
   Calls / Called-by hierarchy — good for reviews and audits.
 - **JSON** (`--json`): machine-readable, `new: true/false` per finding —
   feed it to your own tooling.

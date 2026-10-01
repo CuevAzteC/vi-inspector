@@ -26,8 +26,22 @@ SEV_COLORS = {
 }
 
 CSS = """
+:root{
+--bg:#f7f8fa;--card:#ffffff;--ink:#1a1a1a;--muted:#666;--faint:#8b95a1;
+--line:#e3e6ea;--line-soft:#eef0f2;--soft:#fafbfc;--chip:#eef0f2;--chip-ink:#555;
+--tab-bg:#f4f6f8;--tab-ink:#555;--tab-bd:#d5dae0;--tab-active:#232a33;
+--btn-bg:#ffffff;--btn-bd:#d5dae0;--btn-ink:#2e86c1;--btn-hover:#f0f4f8;
+--link:#2e86c1;--flash:#f59e0b;
+}
+html[data-theme="dark"]{
+--bg:#0c1322;--card:#121c31;--ink:#e6ebf4;--muted:#9aa6bd;--faint:#7c8aa3;
+--line:#24334f;--line-soft:#1b2942;--soft:#0f1830;--chip:#1c2946;--chip-ink:#b9c4d8;
+--tab-bg:#1c2946;--tab-ink:#c4cede;--tab-bd:#2c3d5e;--tab-active:#3b5a7d;
+--btn-bg:#16223a;--btn-bd:#2c3d5e;--btn-ink:#7fb6e8;--btn-hover:#1c2a47;
+--link:#7fb6e8;--flash:#fbbf24;
+}
 body{font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-margin:0;color:#1a1a1a;background:#f7f8fa}
+margin:0;color:var(--ink);background:var(--bg)}
 .layout{display:flex;min-height:100vh}
 .sidebar{width:300px;flex:0 0 300px;background:#232a33;color:#cfd6dd;
 display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
@@ -74,66 +88,76 @@ gap:16px;margin-bottom:4px}
 .vi-head h1{font-size:24px;margin:0 0 4px;word-break:break-word}
 .actions{display:flex;gap:8px;flex:0 0 auto;padding-top:4px}
 .btn{display:inline-block;padding:8px 14px;border-radius:7px;font-size:13.5px;
-font-weight:600;border:1px solid #d5dae0;background:#fff;color:#2e86c1;
+font-weight:600;border:1px solid var(--btn-bd);background:var(--btn-bg);color:var(--btn-ink);
 cursor:pointer;text-decoration:none;white-space:nowrap}
-.btn:hover{background:#f0f4f8;text-decoration:none}
+.btn:hover{background:var(--btn-hover);text-decoration:none}
 .btn.primary{background:#2e86c1;border-color:#2e86c1;color:#fff}
 .btn.primary:hover{background:#2574a8}
-.card{background:#fff;border:1px solid #e3e6ea;border-radius:10px;
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;
 padding:18px 22px;margin-bottom:18px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
 h2{font-size:19px;margin:0 0 10px}
-.sub{color:#666;font-size:13.5px;margin-bottom:14px;word-break:break-all}
+.sub{color:var(--muted);font-size:13.5px;margin-bottom:14px;word-break:break-all}
 .badges{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
 .badge{border-radius:8px;padding:10px 16px;color:#fff;font-weight:600;font-size:15px}
 .badge small{display:block;font-weight:400;font-size:12px;opacity:.9}
 table{width:100%;border-collapse:collapse;font-size:14px}
-th{text-align:left;padding:8px 10px;border-bottom:2px solid #e3e6ea;color:#555;
+th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--line);color:var(--muted);
 font-size:12px;text-transform:uppercase;letter-spacing:.04em}
-td{padding:8px 10px;border-bottom:1px solid #eef0f2;vertical-align:top}
-tbody tr:hover td{background:#fafbfc}
-a{color:#2e86c1;text-decoration:none}a:hover{text-decoration:underline}
+td{padding:8px 10px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+tbody tr:hover td{background:var(--soft)}
+a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}
 .finding{border-left:4px solid #ccc;padding:10px 14px;margin:10px 0;
-background:#fafbfc;border-radius:0 8px 8px 0}
+background:var(--soft);border-radius:0 8px 8px 0}
 .finding h3{margin:0 0 4px;font-size:15px}
-.finding p{margin:4px 0 0;font-size:13.5px;color:#444}
-.rule{display:inline-block;font-size:11px;font-weight:700;background:#eef0f2;
-border-radius:4px;padding:2px 7px;margin-right:8px;color:#555}
+.finding p{margin:4px 0 0;font-size:13.5px;color:var(--ink)}
+.rule{display:inline-block;font-size:11px;font-weight:700;background:var(--chip);
+border-radius:4px;padding:2px 7px;margin-right:8px;color:var(--chip-ink)}
 .sev{display:inline-block;font-size:11px;font-weight:700;color:#fff;
 border-radius:4px;padding:2px 7px;margin-right:6px;text-transform:uppercase}
 .tabs{display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap}
-.tab{padding:8px 16px;border:1px solid #d5dae0;background:#f4f6f8;border-radius:7px;
-font-size:13.5px;font-weight:600;color:#555;cursor:pointer}
-.tab.active{background:#232a33;border-color:#232a33;color:#fff}
-.tab:hover:not(.active){background:#e9edf1}
-.tab-hint{margin-left:auto;font-size:12px;color:#8b95a1}
-.tabpane{border:1px solid #e3e6ea;border-radius:8px;background:#fff;
+.tab{padding:8px 16px;border:1px solid var(--tab-bd);background:var(--tab-bg);border-radius:7px;
+font-size:13.5px;font-weight:600;color:var(--tab-ink);cursor:pointer}
+.tab.active{background:var(--tab-active);border-color:var(--tab-active);color:#fff}
+.tab:hover:not(.active){filter:brightness(.94)}
+.tab-hint{margin-left:auto;font-size:12px;color:var(--faint)}
+.tabpane{border:1px solid var(--line);border-radius:8px;background:var(--card);
 padding:12px;overflow:auto;cursor:default}
 .tabpane.dbl{cursor:pointer}
 .tabpane svg{max-width:100%;height:auto}
 .tabpane img{max-width:100%;height:auto;display:block}
 .hidden{display:none}
-.gt{border:1px solid #e3e6ea;border-radius:8px;background:#fff;
+.gt{border:1px solid var(--line);border-radius:8px;background:var(--card);
 padding:12px;overflow:auto;margin:6px 0 8px}
 .gt img{max-width:100%;height:auto;display:block}
-.metrics{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:#555;margin:8px 0}
-.metrics b{color:#1a1a1a}
-.nav{font-size:13px;margin-bottom:14px;color:#666}
+.metrics{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:8px 0}
+.metrics b{color:var(--ink)}
+.nav{font-size:13px;margin-bottom:14px;color:var(--muted)}
 .call-list{list-style:none;margin:6px 0;padding:0;font-size:14px}
-.call-list li{padding:5px 0;border-bottom:1px solid #f0f2f4}
+.call-list li{padding:5px 0;border-bottom:1px solid var(--line-soft)}
 .call-list li:last-child{border-bottom:none}
 .call-list .dot{display:inline-block;margin-right:8px;vertical-align:1px}
 .call-cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.call-cols h3{font-size:14px;margin:0 0 4px;color:#555}
-.footer{color:#999;font-size:12px;margin-top:24px;text-align:center}
+.call-cols h3{font-size:14px;margin:0 0 4px;color:var(--muted)}
+.footer{color:var(--faint);font-size:12px;margin-top:24px;text-align:center}
 .filter-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;
-font-size:13.5px;color:#555}
-.filter-row select{padding:6px 10px;border-radius:6px;border:1px solid #d5dae0;
-font-size:13.5px}
+font-size:13.5px;color:var(--muted)}
+.filter-row select{padding:6px 10px;border-radius:6px;border:1px solid var(--tab-bd);
+font-size:13.5px;background:var(--card);color:var(--ink)}
 body.hide-clean .tree-vi[data-clean="1"]{display:none !important}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
 background:#232a33;color:#fff;padding:10px 18px;border-radius:8px;font-size:13.5px;
 opacity:0;transition:opacity .25s;pointer-events:none;z-index:99}
 .toast.show{opacity:1}
+
+.finding.locatable{cursor:pointer}
+.finding.locatable:hover{filter:brightness(.97)}
+@keyframes viFlash{0%,100%{filter:none}50%{filter:drop-shadow(0 0 12px var(--flash))}}
+.vi-flash{animation:viFlash .8s ease-in-out 3}
+.cpane-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;
+padding:8px 4px}
+.cpane-wrap>svg{width:min(620px,100%);height:auto}
+.cpane-wrap svg text{font-family:-apple-system,'Segoe UI',Roboto,sans-serif}
+.cpane-cap{font-size:12.5px;color:var(--muted);margin:0;text-align:center}
 @media (max-width:900px){
 .sidebar{width:230px;flex-basis:230px}
 .call-cols{grid-template-columns:1fr}
@@ -218,6 +242,46 @@ if(sevFilter){
       tr.style.display=show?'':'none';});
   });
 }
+/* --- theme: light / dark. The diagram SVGs render with theme_mode="auto"
+   and re-theme themselves off <html data-theme>; this only flips the page
+   chrome to match. Choice persists in localStorage. --- */
+function setTheme(mode){
+  var root=document.documentElement;
+  if(mode==='dark'||mode==='light'){root.setAttribute('data-theme',mode);}
+  else{root.removeAttribute('data-theme');}
+  try{localStorage.setItem('vi-theme',mode||'auto');}catch(e){}
+}
+(function(){
+  var saved='auto';
+  try{saved=localStorage.getItem('vi-theme')||'auto';}catch(e){}
+  if(saved==='dark'||saved==='light'){setTheme(saved);}
+  var btn=document.getElementById('theme-toggle');
+  if(btn){btn.addEventListener('click',function(){
+    var cur=document.documentElement.getAttribute('data-theme');
+    setTheme(cur==='dark'?'light':'dark');
+  });}
+})();
+/* --- click a finding to flash its node on the block diagram --- */
+document.querySelectorAll('.finding[data-locate]').forEach(function(card){
+  card.addEventListener('click',function(){
+    if(document.querySelector('.tab')){showTab('bd');}
+    var pane=document.getElementById('pane-bd');
+    if(!pane){return;}
+    var first=null;
+    card.getAttribute('data-locate').split(/\s+/).forEach(function(id){
+      if(!id){return;}
+      var g=pane.querySelector('g[data-node="'+id+'"]');
+      if(!g){return;}
+      g.classList.remove('vi-flash');
+      void g.getBoundingClientRect();
+      g.classList.add('vi-flash');
+      setTimeout(function(){g.classList.remove('vi-flash');},2600);
+      if(!first){first=g;}
+    });
+    if(first&&first.scrollIntoView){
+      first.scrollIntoView({block:'center',behavior:'smooth'});}
+  });
+});
 """
 
 
@@ -240,33 +304,127 @@ def _file_uri(path: str) -> str | None:
         return None
 
 
-def _render_views(vi_path: str) -> tuple[str | None, str | None]:
+def _render_views(vi_path: str) -> tuple[str | None, str | None, dict]:
     """Render block diagram and front panel SVGs from a single graph load.
 
-    Returns (bd_svg, fp_svg); either may be None on failure. A bad render
-    must never kill the report.
+    Returns (bd_svg, fp_svg, info); either SVG may be None on failure.
+    ``info`` carries ``wire_tips`` ({svg path d: tooltip text}) recorded
+    while the renderer drew its wire nets, for hover tooltips. A bad
+    render must never kill the report.
+
+    Diagrams render with ``theme_mode="auto"`` so they follow the page's
+    ``<html data-theme>`` (toggled by the report's theme button) with no
+    re-render.
     """
     try:
         from lvkit.graph.core import InMemoryVIGraph
         from lvkit.load_mode import LoadMode
         from lvkit.render import render_vi
+        from lvkit.render import composite as _composite
         from lvkit.render.front_panel import render_vi_front_panel
     except Exception:  # noqa: BLE001 -- lvkit too old: no diagrams
-        return None, None
+        return None, None, {"wire_tips": {}}
     for mode in (LoadMode.MINIMAL, LoadMode.NONE):
+        graph = None
         try:
             graph = InMemoryVIGraph()
             key = graph.load_vi(Path(vi_path), mode=mode, layout=True)
             name = key or graph.resolve_vi_name(Path(vi_path).name)
-            bd = render_vi(graph, name)
+            _WIRE_CTX["graph"] = graph
+            _WIRE_CTX["records"] = []
+            global _WIRE_ORIG_DRAW
+            _WIRE_ORIG_DRAW = _composite._draw_wire_nets
+            _composite._draw_wire_nets = _recording_draw_wire_nets
             try:
-                fp = render_vi_front_panel(graph, name)
-            except Exception:  # noqa: BLE001 -- FP optional
-                fp = None
-            return bd, fp
+                bd = render_vi(graph, name, theme_mode="auto")
+                try:
+                    fp = render_vi_front_panel(graph, name, theme_mode="auto")
+                except Exception:  # noqa: BLE001 -- FP optional
+                    fp = None
+            finally:
+                _composite._draw_wire_nets = _WIRE_ORIG_DRAW
+                _WIRE_ORIG_DRAW = None
+            info = {"wire_tips": dict(_WIRE_CTX["records"])}
+            return bd, fp, info
         except Exception:  # noqa: BLE001 -- degrade to NONE, then give up
             continue
-    return None, None
+        finally:
+            _WIRE_CTX["graph"] = None
+            _WIRE_CTX["records"] = []
+    return None, None, {"wire_tips": {}}
+
+
+# ---------------------------------------------------------------------------
+# Wire hover tooltips (data type per wire)
+# ---------------------------------------------------------------------------
+#
+# The lvkit renderer draws wires as bare <path> elements with no metadata,
+# so we record each wire net WHILE it is drawn: _recording_draw_wire_nets
+# wraps lvkit.render.composite._draw_wire_nets during render_vi and logs
+# every branch's exact SVG path data plus a data-type label resolved from
+# the graph. _inject_wire_tips then staples a <title> into each matching
+# path. The path-data format must byte-match SVGBackend.path.
+
+_WIRE_CTX: dict = {"graph": None, "records": []}
+_WIRE_ORIG_DRAW = None  # original composite._draw_wire_nets while recording
+
+
+def _wire_type_label(graph, net) -> str | None:
+    """Human data-type label for a rendered wire net, via the graph."""
+    wire = getattr(net, "source", None)
+    if wire is None or graph is None:
+        return None
+    try:
+        term = graph.get_terminal(wire.source.terminal_id)
+        label = term.type_label()
+    except Exception:  # noqa: BLE001 -- tooltip is optional
+        return None
+    if not label:
+        return None
+    name = (getattr(term, "name", None) or "").strip()
+    if name:
+        return f"Wire '{name}': {label}"
+    return f"Wire: {label}"
+
+
+def _branch_d(branch) -> str:
+    return "M" + " L".join(f"{x:.1f},{y:.1f}" for x, y in branch)
+
+
+def _recording_draw_wire_nets(nets, backend, theme):
+    """Wrap lvkit's wire-net painter; record (path d, type label)."""
+    for net in nets:
+        label = _wire_type_label(_WIRE_CTX["graph"], net)
+        if not label:
+            continue
+        for branch in net.branches:
+            try:
+                _WIRE_CTX["records"].append((_branch_d(branch), label))
+            except Exception:  # noqa: BLE001 -- one bad branch: skip it
+                continue
+    return _WIRE_ORIG_DRAW(nets, backend, theme)
+
+
+def _inject_wire_tips(bd_svg: str | None, wire_tips: dict) -> str | None:
+    """Staple a <title> (data type) into each recorded wire <path>.
+
+    Both the casing and the color stroke of a wire share the same path
+    data, so both get the tooltip. Patterned class wires draw links
+    instead of the branch path and simply get no tooltip.
+    """
+    if not bd_svg or not wire_tips:
+        return bd_svg
+    ordered = sorted(wire_tips, key=len, reverse=True)
+    pat = re.compile(
+        r'<path d="(' + "|".join(re.escape(d) for d in ordered) + r')"'
+        r"([^>]*?)/>")
+
+    def _one(m: re.Match) -> str:
+        label = wire_tips[m.group(1)]
+        return (f'<path d="{m.group(1)}"{m.group(2)}>'
+                f"<title>{html.escape(label)}</title></path>")
+
+    return pat.sub(_one, bd_svg)
 
 
 def _inject_subvi_links(bd_svg: str | None, vi_path: str,
@@ -316,9 +474,115 @@ def _inject_subvi_links(bd_svg: str | None, vi_path: str,
     return pattern.sub(_one, bd_svg)
 
 
-def _finding_html(f) -> str:
+def _extract_cpane(bd_svg: str | None) -> str | None:
+    """Pull the VI's icon + connector-pane face out of the SVG defs.
+
+    The renderer embeds it as ``<g class="lv-vi-aside">`` (icon raster,
+    VI name, connector-pane grid whose cells already carry <title>
+    tooltips with terminal name/type/direction). We lift the inner
+    <svg> -- balanced-scan because the pane grid nests another <svg> --
+    for a dedicated "Connector pane" tab.
+    """
+    if not bd_svg:
+        return None
+    start = bd_svg.find('<g class="lv-vi-aside"')
+    if start < 0:
+        return None
+    svg_start = bd_svg.find("<svg", start)
+    if svg_start < 0:
+        return None
+    # Balanced scan over nested <svg>...</svg> to find the matching close.
+    depth = 0
+    pos = svg_start
+    end = -1
+    while pos < len(bd_svg):
+        lt = bd_svg.find("<", pos)
+        if lt < 0:
+            break
+        if bd_svg.startswith("<svg", lt):
+            gt = bd_svg.find(">", lt)
+            if gt < 0:
+                break
+            if bd_svg[gt - 1] != "/":
+                depth += 1
+            pos = gt + 1
+        elif bd_svg.startswith("</svg>", lt):
+            depth -= 1
+            pos = lt + len("</svg>")
+            if depth == 0:
+                end = pos
+                break
+        else:
+            pos = lt + 1
+    if end < 0:
+        return None
+    return bd_svg[svg_start:end]
+
+
+def _node_name_index(bd_svg: str | None) -> dict:
+    """Map lowercase node display names -> [data-node dom ids].
+
+    Built from the rendered diagram's own <g class="lv-node" ...><title>
+    groups, so finding -> diagram correlation needs no id-space mapping.
+    """
+    index: dict[str, list[str]] = {}
+    if not bd_svg:
+        return index
+    for m in re.finditer(r"<g([^>]*?)>\s*<title>(.*?)</title>", bd_svg, re.S):
+        attrs, title = m.group(1), m.group(2)
+        if "lv-node" not in attrs:
+            continue
+        dm = re.search(r'data-node="([^"]+)"', attrs)
+        if not dm:
+            continue
+        # Title format: "<qualified node name>\nInputs:\n ..."; the name is
+        # the first line.
+        first_line = title.strip().split("\n")[0].strip()
+        name = " ".join(first_line.split()).lower()
+        if name:
+            index.setdefault(name, []).append(dm.group(1))
+    return index
+
+
+def _match_name(nm: str, index: dict) -> list:
+    out: list[str] = []
+    for cand, ids in index.items():
+        if cand == nm or cand.endswith(":" + nm) or cand.endswith("/" + nm):
+            out.extend(ids)
+    return list(dict.fromkeys(out))
+
+
+def _locate_ids(node_name: str | None, index: dict) -> list:
+    """dom ids of diagram nodes a finding's node name refers to.
+
+    A quoted qualifier (``Property Node 'AllObjs[]'``) names WHICH node of
+    a generic kind -- but the diagram title only carries the generic kind,
+    so we locate it only when exactly one node of that kind exists.
+    Otherwise a flash across several nodes would mislead.
+    """
+    nm = (node_name or "").strip().lower()
+    if not nm or not index:
+        return []
+    ids = _match_name(nm, index)
+    if ids:
+        return ids
+    qualified = re.match(r"^(.*?) '[^']*'$", nm)
+    if qualified:
+        ids = _match_name(qualified.group(1), index)
+        return ids if len(ids) == 1 else []
+    return []
+
+
+def _finding_html(f, locate_ids: list | None = None) -> str:
+    ids = locate_ids or []
+    if ids:
+        extra = (f' data-locate="{" ".join(html.escape(i, quote=True) for i in ids)}"'
+                 ' title="Click to locate this node on the block diagram"')
+        cls = "finding locatable"
+    else:
+        extra, cls = "", "finding"
     return (
-        f'<div class="finding" style="border-color:{SEV_COLORS[f.severity]}">'
+        f'<div class="{cls}" style="border-color:{SEV_COLORS[f.severity]}"{extra}>'
         f"{_sev_badge(f.severity)}"
         f'<span class="rule">{html.escape(f.rule_id)}</span>'
         f"<h3 style=\"display:inline\">{html.escape(f.title)}</h3>"
@@ -567,6 +831,7 @@ document.querySelectorAll('.lv-node[data-callee-page],.lv-node[data-callee-open]
 def _vi_page(review: VIReview, sidebar: str, page_names: dict[str, str],
              sev_by_path: dict[str, str | None], graph: dict,
              bd_svg: str | None, fp_svg: str | None,
+             cpane_svg: str | None, node_index: dict,
              ground_truth: dict | None) -> str:
     counts = {s: len(review.by_severity(s)) for s in SEVERITY_ORDER}
     badges = "".join(
@@ -582,6 +847,9 @@ def _vi_page(review: VIReview, sidebar: str, page_names: dict[str, str],
             f'<a class="btn primary" href="{html.escape(lv_uri, quote=True)}"'
             ' title="Open this VI in LabVIEW (works when viewing the report'
             ' from disk)">Open in LabVIEW</a>')
+    theme_btn = (
+        '<button class="btn" id="theme-toggle" '
+        'title="Toggle light/dark diagrams and page">◐ Theme</button>')
 
     if not review.parse_ok:
         findings_card = (
@@ -589,8 +857,9 @@ def _vi_page(review: VIReview, sidebar: str, page_names: dict[str, str],
             f"<p>{html.escape(review.parse_error or '')}</p></div>")
         diagrams_card = ""
     else:
-        findings = "".join(_finding_html(f) for f in review.findings) or \
-            "<p>No findings. Clean review.</p>"
+        findings = "".join(
+            _finding_html(f, _locate_ids(f.node_name, node_index))
+            for f in review.findings) or "<p>No findings. Clean review.</p>"
         findings_card = (
             f'<div class="card"><h2>Findings ({len(review.findings)})</h2>'
             f"{findings}</div>")
@@ -603,6 +872,15 @@ def _vi_page(review: VIReview, sidebar: str, page_names: dict[str, str],
             _diagram_pane(bd_svg, "pane-bd", "Block diagram render"),
             _diagram_pane(fp_svg, "pane-fp", "Front panel render"),
         ]
+        if cpane_svg:
+            tabs.append(
+                '<button class="tab" data-tab="cp">Connector pane</button>')
+            panes.append(
+                f'<div id="pane-cp" class="tabpane hidden">'
+                f'<div class="cpane-wrap">{cpane_svg}'
+                '<p class="cpane-cap">VI icon and connector pane as defined '
+                "in the VI &mdash; hover a terminal for its details.</p>"
+                "</div></div>")
         if ground_truth:
             tabs.append(
                 '<button class="tab" data-tab="gt">LabVIEW export</button>')
@@ -612,9 +890,9 @@ def _vi_page(review: VIReview, sidebar: str, page_names: dict[str, str],
         diagrams_card = (
             '<div class="card"><h2>Diagram</h2>'
             '<div class="tabs">' + "".join(tabs) +
-            '<span class="tab-hint">Ctrl+E toggles &middot; double-click a '
-            "SubVI to open it &middot; double-click empty space opens this "
-            "VI</span></div>"
+            '<span class="tab-hint">Ctrl+E toggles &middot; hover a wire for '
+            "its data type &middot; double-click a SubVI to open it &middot; "
+            "double-click empty space opens this VI</span></div>"
             + "".join(panes) + "</div>")
 
     metrics = "".join(
@@ -628,6 +906,7 @@ def _vi_page(review: VIReview, sidebar: str, page_names: dict[str, str],
         f'<div class="actions">{open_btn}'
         '<button class="btn" onclick="copyPath()" '
         'title="Copy the VI file path to the clipboard">Copy path</button>'
+        f"{theme_btn}"
         "</div></div>"
         f"{findings_card}"
         f"{diagrams_card}"
@@ -715,7 +994,9 @@ def _index_page(project_name: str, reviews: list[VIReview], sidebar: str,
         f"<h1>{html.escape(project_name)}</h1>"
         f'<div class="sub">Automated LabVIEW code review &mdash; '
         f"{len(ok)}/{len(reviews)} VIs parsed, no LabVIEW required</div>"
-        f'<div class="badges">{badges}</div>'
+        f'<div class="badges">{badges}'
+        '<button class="btn" id="theme-toggle" style="margin-left:auto"'
+        ' title="Toggle light/dark page theme">◐ Theme</button></div>'
         '<div class="card"><h2>Findings by rule</h2>'
         "<table><tr><th>Rule</th><th>Count</th></tr>"
         f"{rule_rows}</table></div>"
@@ -798,15 +1079,19 @@ def generate_report(reviews: list[VIReview], project_name: str,
 
     for i, r in enumerate(reviews):
         with_views = max_diagrams is None or i < max_diagrams
-        bd_svg, fp_svg = None, None
+        bd_svg, fp_svg, cpane_svg, node_index = None, None, None, {}
         if with_views and r.parse_ok:
-            bd_svg, fp_svg = _render_views(r.vi_path)
+            bd_svg, fp_svg, info = _render_views(r.vi_path)
             bd_svg = _inject_subvi_links(bd_svg, r.vi_path, page_for)
+            bd_svg = _inject_wire_tips(bd_svg, info.get("wire_tips", {}))
+            cpane_svg = _extract_cpane(bd_svg)
+            node_index = _node_name_index(bd_svg)
         sidebar = _sidebar_html(project_name, tree,
                                 active_page=page_names[r.vi_path],
                                 lvproj_uri=lvproj_uri)
         html_text = _vi_page(r, sidebar, page_names, sev_by_path, graph,
-                             bd_svg, fp_svg, _gt_for(r))
+                             bd_svg, fp_svg, cpane_svg, node_index,
+                             _gt_for(r))
         (out / page_names[r.vi_path]).write_text(html_text, encoding="utf-8")
 
     index_html = _index_page(project_name, reviews, sidebar_index,
