@@ -159,3 +159,116 @@ def test_cli_sarif_output(tmp_path):
     assert data["version"] == "2.1.0"
     assert data["runs"][0]["tool"]["driver"]["name"] == "vi-inspector"
     assert len(data["runs"][0]["results"]) > 0
+
+
+# --- WIRE-1: unwired REQUIRED inputs (precision rebuild) ----------------------
+# The 2026-10-01 audit removed WIRE-1 (0/6 samples actionable). The rebuilt
+# rule only fires on REQUIRED connector-pane inputs, resolved cross-VI.
+
+from types import SimpleNamespace
+
+from vi_inspector.review import (
+    ReviewContext,
+    _rule_unwired_required_inputs,
+    VIReview,
+)
+
+
+def _wire1_pvi(wired_uids=(), term_index=5, is_output=False,
+               node_type="iUse", node_name="Callee.vi"):
+    node = SimpleNamespace(uid="n1", node_type=node_type, name=node_name,
+                           label=None)
+    term = SimpleNamespace(uid="t1", parent_uid="n1", index=term_index,
+                           is_output=is_output)
+    wires = [SimpleNamespace(from_term=u, to_term="x") for u in wired_uids]
+    bd = SimpleNamespace(nodes=[node], terminal_info={"t1": term},
+                         wires=wires)
+    return SimpleNamespace(block_diagram=bd)
+
+
+def _wire1_ctx(rules=None, labels=None):
+    ctx = SimpleNamespace()
+    ctx.callee_interface = lambda caller, name: (
+        ("/some/Callee.vi", rules if rules is not None else {5: 1},
+         labels if labels is not None else {5: "my input"})
+    )
+    return ctx
+
+
+def _run_wire1(pvi, ctx):
+    review = VIReview(vi_path="/some/Caller.vi", vi_name="Caller.vi")
+    _rule_unwired_required_inputs(pvi, review, ctx)
+    return [f for f in review.findings if f.rule_id == "WIRE-1"]
+
+
+def test_wire1_fires_on_unwired_required_input():
+    hits = _run_wire1(_wire1_pvi(), _wire1_ctx())
+    assert len(hits) == 1
+    assert hits[0].severity == "high"
+    assert "my input" in hits[0].title and "Callee.vi" in hits[0].title
+
+
+def test_wire1_ignores_wired_required_input():
+    hits = _run_wire1(_wire1_pvi(wired_uids=("t1",)), _wire1_ctx())
+    assert hits == []
+
+
+def test_wire1_ignores_recommended_and_optional():
+    pvi = _wire1_pvi()
+    hits = _run_wire1(pvi, _wire1_ctx(rules={5: 2}, labels={5: "rec"}))
+    assert hits == []
+    hits = _run_wire1(pvi, _wire1_ctx(rules={5: 3}, labels={5: "opt"}))
+    assert hits == []
+
+
+def test_wire1_ignores_outputs():
+    # Required on an output is meaningless in LabVIEW (can't compel caller).
+    hits = _run_wire1(_wire1_pvi(is_output=True), _wire1_ctx())
+    assert hits == []
+
+
+def test_wire1_ignores_unknown_rule_and_missing_slot():
+    pvi = _wire1_pvi()
+    assert _run_wire1(pvi, _wire1_ctx(rules={5: 0})) == []
+    assert _run_wire1(pvi, _wire1_ctx(rules={})) == []
+
+
+def test_wire1_skips_method_calls_and_unresolvable():
+    pvi = _wire1_pvi(node_type="dynIUse")
+    assert _run_wire1(pvi, _wire1_ctx()) == []  # phantom-terminal family
+    ctx = SimpleNamespace()
+    ctx.callee_interface = lambda caller, name: None
+    assert _run_wire1(_wire1_pvi(), ctx) == []
+    assert _run_wire1(_wire1_pvi(), None) == []  # no context: skip
+
+
+def test_wire1_no_false_positives_on_fixtures():
+    # Vessel Simulator is committed, working code: a precise WIRE-1 must
+    # stay silent (the audit's 0%-precision failure must not regress).
+    import glob as _glob
+    paths = sorted(_glob.glob(vi("vessel", "**", "*.vi"), recursive=True))
+    reviews = review_many(paths)
+    assert all(r.parse_ok for r in reviews)
+    hits = [f for r in reviews for f in r.findings if f.rule_id == "WIRE-1"]
+    assert hits == [], [f.title for f in hits]
+
+
+def test_review_context_indexes_vim_and_prefers_same_dir(tmp_path):
+    d1 = tmp_path / "a"
+    d2 = tmp_path / "b"
+    d1.mkdir()
+    d2.mkdir()
+    (d1 / "Helper.vi").touch()
+    (d2 / "Helper.vi").touch()
+    (d1 / "Tool.vim").touch()
+    caller = d1 / "Caller.vi"
+    caller.touch()
+    ctx = ReviewContext([str(caller), str(d1 / "Helper.vi")])
+    got = ctx._resolve_callee(str(caller), "Helper.vi")
+    assert got == str(d1 / "Helper.vi")  # same dir wins
+    got = ctx._resolve_callee(str(caller), "Tool.vim")
+    assert got == str(d1 / "Tool.vim")  # .vim indexed
+    assert ctx._resolve_callee(str(caller), "Nope.vi") is None
+    # library-qualified names resolve on the leaf
+    got = ctx._resolve_callee(str(caller), "myLib.lvlib:Helper.vi")
+    assert got == str(d1 / "Helper.vi")

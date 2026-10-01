@@ -48,15 +48,17 @@ Other useful flags: `--json`, `--sarif FILE`, `--html OUT_DIR`,
 | ERR-1b | medium | Broken error chain on primitives: error-in wired but error-out unwired. Node names include method/property names (e.g. `Invoke Node 'FP.Close'`). |
 | ERR-2 | high | Connector pane exposes error in/out but no error cluster is wired anywhere on the diagram. |
 | RACE-1 | medium | Local variables (one summarized finding per VI — they break dataflow and risk races). |
+| WIRE-1 | high | Unwired **required** inputs on SubVI calls. Resolves the callee VI and reads its connector-pane wiring rules — only `Required` terminals are flagged (an unwired required input means the VI cannot run). Recommended/optional inputs have defaults and are never flagged; unresolvable callees (vi.lib, missing files) are skipped. |
 | CPLX-1 | info | Diagrams over 50 nodes — consider splitting into subVIs. |
 
 **Precision:** every rule was audited against genuine LabVIEW-rendered block
 diagrams (15 findings sampled, verified by hand). ERR-1 true-positive rate
-75%, RACE-1 and CPLX-1 100%. A former WIRE-1 rule ("unwired SubVI inputs")
-was **removed** after the audit found 0% actionable hits — method-call nodes
+75%, RACE-1 and CPLX-1 100%. An earlier WIRE-1 rule ("unwired SubVI inputs")
+was removed after the audit found 0% actionable hits — method-call nodes
 expose phantom terminals in the parsed model and the rest were
-optional-with-defaults noise. A precise version needs cross-VI connector-pane
-analysis and is tracked as a planned rule.
+optional-with-defaults noise. It was rebuilt as a precise cross-VI rule:
+only `Required` connector-pane inputs are flagged, verified silent on the
+full Vessel Simulator fixture set.
 
 ## Compatibility
 
